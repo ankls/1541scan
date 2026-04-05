@@ -48,11 +48,24 @@ TrackSectorIndex diskSectorIndexToTrackSectorIndex(DiskSectorIndex const disk_se
 
 void clearDiskDescriptor(DiskDescriptor * const disk_descriptor)
 {
-    unsigned i;
-    for (i = 0; i < SECTORS_PER_DISK; ++i)
     {
-        disk_descriptor->descriptor[i].flags = 0;
-        disk_descriptor->descriptor[i].latest_dos_error = DOS_EC_OK;
+        unsigned i;
+        for (i = 0; i < SECTORS_PER_DISK; ++i)
+        {
+            disk_descriptor->descriptor[i].flags = 0x00;
+            disk_descriptor->descriptor[i].latest_dos_error = DOS_EC_OK;
+        }
+    }
+    {
+        ubyte idx;
+        for (idx = 0; idx<16; ++idx)
+        { disk_descriptor->disk_name[idx] = '\0'; }
+        disk_descriptor->pad1[0] = '\0';
+        disk_descriptor->pad1[1] = '\0';
+        disk_descriptor->disk_id[0] = '\0';
+        disk_descriptor->disk_id[1] = '\0';
+        disk_descriptor->pad2[0] = '\0';
+        disk_descriptor->pad2[1] = '\0';
     }
 }
 
@@ -68,3 +81,47 @@ ubyte calculateBlockChecksum(BlockData const * const block_data)
     return checksum;
 }
 
+void addBAMToDescriptor(BAM const * bam, DiskDescriptor * const diskDescriptor)
+{
+    TrackNr track_nr;
+    TrackSectorIndex sector_idx;
+    SectorDescriptor * sd;
+
+    // copy allocation table
+    for (track_nr = 1; track_nr <= TRACKS_PER_DISK; ++track_nr)
+    {
+        TrackBAM * trk_bam_ptr = &(bam->track_bam[track_nr-1]);
+        for (sector_idx = 0; sector_idx < numSectorsInTrackNr(track_nr); ++sector_idx)
+        {
+            ubyte * bam_byte;
+            ubyte   bam_bit;
+
+            bam_byte = &(trk_bam_ptr->allocation_bits_0_to_7) + (sector_idx >> 3);
+            bam_bit  = 1 << (sector_idx & 0x07);
+
+            sd = &(diskDescriptor->descriptor[trackAndSectorToDiskSectorIndex(track_nr, sector_idx)]);
+
+            if  ((*bam_byte & bam_bit) != 0x00)
+            {
+                // allocated
+                sd->flags |= SF_Allocated;
+            }
+            else
+            {
+                // not allocated
+                sd->flags &= ~SF_Allocated;
+            }
+        }
+    }
+
+    // copy disk name
+    {
+        ubyte idx;
+        for (idx = 0; idx < sizeof(bam->disk_name); ++idx)
+        { diskDescriptor->disk_name[idx] = bam->disk_name[idx]; }
+    }
+
+    // copy disk ID
+    diskDescriptor->disk_id[0] = bam->disk_id[0];
+    diskDescriptor->disk_id[1] = bam->disk_id[1];
+}
