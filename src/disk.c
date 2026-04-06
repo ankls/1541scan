@@ -100,8 +100,8 @@ void addBAMToDescriptor(BAM const * bam, DiskDescriptor * const diskDescriptor)
             bam_bit  = 1 << (sector_idx & 0x07);
 
             sd = &(diskDescriptor->descriptor[trackAndSectorToDiskSectorIndex(track_nr, sector_idx)]);
-
-            if  ((*bam_byte & bam_bit) != 0x00)
+            
+            if  (((*bam_byte) & bam_bit) == 0x00)
             {
                 // allocated
                 sd->flags |= SF_Allocated;
