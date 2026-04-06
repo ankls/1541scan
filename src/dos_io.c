@@ -126,8 +126,11 @@ DOS_ERROR_CODE readDriveErrorCode()
     DOS_ERROR_CODE dosec;
     u16 bytes_read;
 
-    g_status_buffer.data[0] = '\0'; // To kill previous contents
-    g_status_buffer.data[1] = '\0'; // To kill previous contents
+    {
+        ubyte idx;
+        for (idx = 0; idx < sizeof(g_status_buffer.data); ++idx)
+        { g_status_buffer.data[idx] = '\0'; } // To kill previous contents
+    }
 
     READ_FROM_DRIVE(&g_channel_command, &(g_status_buffer.data[0]), sizeof(g_status_buffer.data), &bytes_read);
 
@@ -135,6 +138,11 @@ DOS_ERROR_CODE readDriveErrorCode()
     dosec = dosec + (g_status_buffer.data[1] - '0'); // Convert second ASCII digit and add to the first
 
     return dosec;
+}
+
+Status const * getLastDriveStatusString()
+{
+    return &g_status_buffer;
 }
 
 DOS_ERROR_CODE readSector(TrackNr track_nr, TrackSectorIndex sector_idx, BlockData * const block_data)
