@@ -59,11 +59,11 @@ void clearDiskDescriptor(DiskDescriptor * const disk_descriptor)
     {
         ubyte idx;
         for (idx = 0; idx<16; ++idx)
-        { disk_descriptor->disk_name[idx] = '\0'; }
+        { disk_descriptor->disk_name[idx] = ' '; }
         disk_descriptor->pad1[0] = '\0';
         disk_descriptor->pad1[1] = '\0';
-        disk_descriptor->disk_id[0] = '\0';
-        disk_descriptor->disk_id[1] = '\0';
+        disk_descriptor->disk_id[0] = ' ';
+        disk_descriptor->disk_id[1] = ' ';
         disk_descriptor->pad2[0] = '\0';
         disk_descriptor->pad2[1] = '\0';
     }
@@ -100,7 +100,7 @@ void addBAMToDescriptor(BAM const * bam, DiskDescriptor * const diskDescriptor)
             bam_bit  = 1 << (sector_idx & 0x07);
 
             sd = &(diskDescriptor->descriptor[trackAndSectorToDiskSectorIndex(track_nr, sector_idx)]);
-            
+
             if  (((*bam_byte) & bam_bit) == 0x00)
             {
                 // allocated
