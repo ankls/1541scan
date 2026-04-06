@@ -25,5 +25,6 @@ bool sendDirectCommandBP(ubyte offset);
 bool sendDirectCommandMR(u16 floppy_memory_address, u16 len);
 bool readFromDrive(ubyte * const buffer_address, u16 const buffer_len, u16 * const bytes_read);
 DOS_ERROR_CODE readDriveErrorCode();
+DOS_ERROR_CODE readSector(TrackNr track_nr, TrackSectorIndex sector_idx, BlockData * const block_data);
 
 #endif // DOS_IO_H

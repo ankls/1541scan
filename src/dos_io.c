@@ -136,3 +136,37 @@ DOS_ERROR_CODE readDriveErrorCode()
 
     return dosec;
 }
+
+DOS_ERROR_CODE readSector(TrackNr track_nr, TrackSectorIndex sector_idx, BlockData * const block_data)
+{
+    bool ok;
+    DOS_ERROR_CODE dosec;
+    u16 bytes_read;
+
+#if PRINT_IO
+    printf("trk %2d,sec %2d,", track_nr, sector_idx);
+#endif
+    ok = sendDirectCommandU1(track_nr, sector_idx);
+
+    if (false == ok)
+    { return DOS_EC_DRIVE_NOT_READY; } // We fake this error code
+
+#if PRINT_IO
+    printf("U1 %s,", (ok ? "OK" : "FAIL"));
+#endif
+    dosec = readDriveErrorCode();
+    if (DOS_EC_OK != dosec)
+    { return dosec; }
+
+#if PRINT_IO
+    printf("DOS %s\n", dosErrorString(dosec));
+#endif
+    sendDirectCommandMR(0x0300, 256); // read 256 bytes from floppy memory at 0x0300 into the block buffer
+    readFromDrive(&(block_data->data[0]), sizeof(BlockData), &bytes_read);
+
+    if (bytes_read != sizeof(BlockData))
+    { return DOS_EC_READ_ERROR_27; } // We fake this error code
+    else
+    { return DOS_EC_OK; }
+}
+
