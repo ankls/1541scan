@@ -55,9 +55,9 @@ typedef struct
 {
     SectorDescriptor descriptor[SECTORS_PER_DISK];
     char             disk_name[16];              // padded with 160 (0xa0, shift-space)
-    ubyte            pad1[2];                   // zero to terminate disk name;
+    ubyte            pad1[2];                    // zero to terminate disk name;
     char             disk_id[2];                 // disk ID
-    ubyte            pad2[2];                   // zero to terminate disk name;
+    ubyte            pad2[2];                    // zero to terminate disk name;
 } DiskDescriptor;
 
 // The indexing starts with 0, unlike tracks and sectors
