@@ -276,7 +276,7 @@ bool readFiles()
 
     displayMenu("<- Abort. Reading all files.");
 
-    for (file_idx = 0; file_idx < g_disk_descriptor.numFilesFound; ++file_idx)
+    for (file_idx = 0; (file_idx < g_disk_descriptor.numFilesFound) && (false == abort_operation); ++file_idx)
     {
         FileEntry *      fe_ptr;
         u16              blocks_read; // Used to break loops due to protections or corruption
@@ -291,7 +291,8 @@ bool readFiles()
 
         while (  (NO_MORE_FILE_TRACK != track_nr) // This is the exit condition (track 0) for a sane disk
               && (TRACKS_PER_DISK >= track_nr)    // Maybe due to corruption or copy protection
-              && (numSectorsInTrackNr(track_nr) > sector_idx)) // same as above
+              && (numSectorsInTrackNr(track_nr) > sector_idx) // same as above
+              && (false == abort_operation))
         {
             SectorDescriptor * sd;
 
@@ -305,7 +306,7 @@ bool readFiles()
             if (DOS_EC_OK != sd->latest_dos_error)
             { displayStatus((char const * const) &(getLastDriveStatusString()->data[0])); }
             else
-            { displayStatus(fe_ptr->fileName); }
+            { displayStatus((char const * const) fe_ptr->fileName); }
 
             // If we didn't read this sector already in another pass,
             // then mark this as read now. And, while we're at it,
