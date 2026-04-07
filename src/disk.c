@@ -48,14 +48,16 @@ TrackSectorIndex diskSectorIndexToTrackSectorIndex(DiskSectorIndex const disk_se
 
 void clearDiskDescriptor(DiskDescriptor * const disk_descriptor)
 {
+    // TODO replace some clearing by memset()
     {
         unsigned idx16;
         ubyte * ptr;
 
         for (idx16 = 0; idx16 < SECTORS_PER_DISK; ++idx16)
         {
-            disk_descriptor->descriptor[idx16].flags = 0x00;
+            disk_descriptor->descriptor[idx16].flags            = 0x00;
             disk_descriptor->descriptor[idx16].latest_dos_error = DOS_EC_OK;
+            disk_descriptor->descriptor[idx16].file_table_idx   = 0;
         }
 
         ptr = (ubyte *) &(disk_descriptor->files);

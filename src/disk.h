@@ -24,16 +24,18 @@ ubyte calculateBlockChecksum(BlockData const * const block_data);
 
 /////////////////////////////////////////////////////////////////////////////////
 // Sector-related definitions
-typedef enum { SF_SectorRead    = 0x01, // Does the descriptor contain any usable info?
+typedef enum { SF_SectorRead     = 0x01, // Does the descriptor contain any usable info?
                SF_WeakContents   = 0x02, // Does the block data change during reads?
                SF_Busy           = 0x04, // Are we busy updating the descriptor's info?
                SF_Allocated      = 0x08, // Marked as occuped in BAM
+               SF_File           = 0x10, // Occupied by a file (found by following file block chains)
               } SectorFlags;
 
 typedef struct {
     ubyte                   flags;
     DOSErrorCode            latest_dos_error;
     ubyte                   checksum;
+    ubyte                   file_table_idx;
 } SectorDescriptor;
 
 
@@ -103,7 +105,8 @@ typedef struct
 } FileEntry;
 
 enum {NO_MORE_DIRECTORY_TRACK  = 0x00,
-      NO_MORE_DIRECTORY_SECTOR = 0xff};
+      NO_MORE_DIRECTORY_SECTOR = 0xff,
+      NO_MORE_FILE_TRACK       = 0x00 };
 enum { MAX_DIRECTORY_SECTORS = 18, // Track 18 has 19 dectors but one is occupied by the BAM
        MAX_FILES_PER_DIRECTORY_SECTOR = 8,
        MAX_FILES_PER_DISK = MAX_DIRECTORY_SECTORS * MAX_FILES_PER_DIRECTORY_SECTOR // 144
@@ -120,7 +123,7 @@ typedef struct
 /////////////////////////////////////////////////////////////////////////////////
 // Disk-related definitions
 
-#define TRACKS_PER_DISK 36
+#define TRACKS_PER_DISK 35
 #define SECTORS_PER_DISK 683
 
 typedef struct
