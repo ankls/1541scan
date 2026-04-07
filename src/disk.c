@@ -49,17 +49,24 @@ TrackSectorIndex diskSectorIndexToTrackSectorIndex(DiskSectorIndex const disk_se
 void clearDiskDescriptor(DiskDescriptor * const disk_descriptor)
 {
     {
-        unsigned i;
-        for (i = 0; i < SECTORS_PER_DISK; ++i)
+        unsigned idx16;
+        ubyte * ptr;
+
+        for (idx16 = 0; idx16 < SECTORS_PER_DISK; ++idx16)
         {
-            disk_descriptor->descriptor[i].flags = 0x00;
-            disk_descriptor->descriptor[i].latest_dos_error = DOS_EC_OK;
+            disk_descriptor->descriptor[idx16].flags = 0x00;
+            disk_descriptor->descriptor[idx16].latest_dos_error = DOS_EC_OK;
         }
+
+        ptr = (ubyte *) &(disk_descriptor->files);
+        for (idx16 = 0; idx16 < sizeof(FileEntry) * MAX_FILES_PER_DISK; ++idx16)
+        { *(ptr++) = 0; }
     }
+
     {
-        ubyte idx;
-        for (idx = 0; idx<16; ++idx)
-        { disk_descriptor->disk_name[idx] = ' '; }
+        ubyte idx8;
+        for (idx8 = 0; idx8<16; ++idx8)
+        { disk_descriptor->disk_name[idx8] = ' '; }
         disk_descriptor->pad1[0] = '\0';
         disk_descriptor->pad1[1] = '\0';
         disk_descriptor->disk_id[0] = ' ';
@@ -67,6 +74,10 @@ void clearDiskDescriptor(DiskDescriptor * const disk_descriptor)
         disk_descriptor->pad2[0] = '\0';
         disk_descriptor->pad2[1] = '\0';
     }
+
+    disk_descriptor->bamWasRead = false;
+    disk_descriptor->dirWasRead = false;
+    disk_descriptor->numFilesFound = 0;
 }
 
 // Computes the checksum byte of a block
@@ -81,7 +92,7 @@ ubyte calculateBlockChecksum(BlockData const * const block_data)
     return checksum;
 }
 
-void addBAMToDescriptor(BAM const * bam, DiskDescriptor * const diskDescriptor)
+void addBAMToDescriptor(BAM const * bam, DiskDescriptor * const disk_descriptor)
 {
     TrackNr track_nr;
     TrackSectorIndex sector_idx;
@@ -99,7 +110,7 @@ void addBAMToDescriptor(BAM const * bam, DiskDescriptor * const diskDescriptor)
             bam_byte = &(trk_bam_ptr->allocation_bits_0_to_7) + (sector_idx >> 3);
             bam_bit  = 1 << (sector_idx & 0x07);
 
-            sd = &(diskDescriptor->descriptor[trackAndSectorToDiskSectorIndex(track_nr, sector_idx)]);
+            sd = &(disk_descriptor->descriptor[trackAndSectorToDiskSectorIndex(track_nr, sector_idx)]);
 
             if  (((*bam_byte) & bam_bit) == 0x00)
             {
@@ -118,10 +129,12 @@ void addBAMToDescriptor(BAM const * bam, DiskDescriptor * const diskDescriptor)
     {
         ubyte idx;
         for (idx = 0; idx < sizeof(bam->disk_name); ++idx)
-        { diskDescriptor->disk_name[idx] = bam->disk_name[idx]; }
+        { disk_descriptor->disk_name[idx] = bam->disk_name[idx]; }
     }
 
     // copy disk ID
-    diskDescriptor->disk_id[0] = bam->disk_id[0];
-    diskDescriptor->disk_id[1] = bam->disk_id[1];
+    disk_descriptor->disk_id[0] = bam->disk_id[0];
+    disk_descriptor->disk_id[1] = bam->disk_id[1];
+
+    disk_descriptor->bamWasRead = true;
 }

@@ -44,26 +44,6 @@ typedef struct {
 typedef ubyte TrackNr;
 typedef ubyte TrackSectorIndex; // The index of the sector within the track, starting with 1
 
-
-/////////////////////////////////////////////////////////////////////////////////
-// Disk-related definitions
-
-#define TRACKS_PER_DISK 36
-#define SECTORS_PER_DISK 683
-
-typedef struct
-{
-    SectorDescriptor descriptor[SECTORS_PER_DISK];
-    char             disk_name[16];              // padded with 160 (0xa0, shift-space)
-    ubyte            pad1[2];                    // zero to terminate disk name;
-    char             disk_id[2];                 // disk ID
-    ubyte            pad2[2];                    // zero to terminate disk name;
-} DiskDescriptor;
-
-// The indexing starts with 0, unlike tracks and sectors
-typedef u16 DiskSectorIndex;
-
-
 /////////////////////////////////////////////////////////////////////////////////
 // BAM
 
@@ -77,31 +57,104 @@ typedef struct
 
 typedef struct
 {
-    ubyte     directory_tracNk;           // expect:0x12
-    ubyte     directory_sectoIdxr;        // expect:0x01
+    ubyte     directory_trackNr;          // expect:0x12
+    ubyte     directory_sectorIdx;        // expect:0x01
     ubyte     format_indicator;           // expect: 0x41, "A"
     ubyte     double_sided;               // no=0x00, yes=0x80
     TrackBAM  track_bam[35];
     char      disk_name[16];              // padded with 160 (0xa0, shift-space)
-    ubyte     pad1[2];                   // 160 (0xa0, shift-space)
+    ubyte     pad1[2];                    // 160 (0xa0, shift-space)
     char      disk_id[2];
-    ubyte     pad2[1];                   // 160 (0xa0, shift-space)
+    ubyte     pad2[1];                    // 160 (0xa0, shift-space)
     ubyte     dos_version;                // 2 = CBM DOS 2.6
-    ubyte     format_indicator_copy;       // expect: "A" for 4040 format 
+    ubyte     format_indicator_copy;      // expect: "A" for 4040 format 
     ubyte     floppy_mode[3];             // 0x00==1541, 0xa0==1571
     ubyte     reserved1[41];
     ubyte     blocks1571[35];             // unused on 1541
 } BAM;
 
+/////////////////////////////////////////////////////////////////////////////////
+// Directory
+
+enum { FILE_STATUS_MASK                = 0xf0,
+       FILE_STATUS_NORMAL              = 0x00,
+       FILE_STATUS_DELETED             = 0x80,
+       FILE_STATUE_DELETED_REPLACEMENT = 0xa0,
+       FILE_STATUS_LOCKED              = 0xC0};
+enum { FILE_TYPE_MASK                  = 0x0f,
+       FILE_TYPE_DELETED               = 0x00,
+       FILE_TYPE_SEQUENTIAL            = 0x01,
+       FILE_TYPE_PROGRAM               = 0x02,
+       FILE_TYPE_USER                  = 0x03,
+       FILE_TYPE_RELATIVE              = 0x04};
+
+typedef struct
+{
+    ubyte fileType;          //  FILE_STATUS_MASK / FILE_TYPE_MASK
+    ubyte fileDataStartTrackNr;
+    ubyte fileDataStartSectorIdx;
+    ubyte fileName[16];      // filled to end with 0xa0 (shift-space)
+    ubyte fileRelSectors[2]; // only for REL files
+    ubyte fileRelRecordSize; // only for REL files
+    ubyte pad1[4];           // are to be always 0x00
+    ubyte dosTmpReplace;     // temporary space for DOS and its replace operation
+    u16   fileSizeInBlocks;
+    ubyte pad[2];
+} FileEntry;
+
+enum {NO_MORE_DIRECTORY_TRACK  = 0x00,
+      NO_MORE_DIRECTORY_SECTOR = 0xff};
+enum { MAX_DIRECTORY_SECTORS = 18, // Track 18 has 19 dectors but one is occupied by the BAM
+       MAX_FILES_PER_DIRECTORY_SECTOR = 8,
+       MAX_FILES_PER_DISK = MAX_DIRECTORY_SECTORS * MAX_FILES_PER_DIRECTORY_SECTOR // 144
+     };
+
+typedef struct
+{
+    ubyte nextDirectoryTrackNr;
+    ubyte nextDirectorySectorIdx;
+    FileEntry entries[MAX_FILES_PER_DIRECTORY_SECTOR];
+} DirectoryBlock;
+
+
+/////////////////////////////////////////////////////////////////////////////////
+// Disk-related definitions
+
+#define TRACKS_PER_DISK 36
+#define SECTORS_PER_DISK 683
+
+typedef struct
+{
+    SectorDescriptor descriptor[SECTORS_PER_DISK];
+    char             disk_name[16];              // padded with 160 (0xa0, shift-space)
+    ubyte            pad1[2];                    // zero to terminate disk name
+    char             disk_id[2];                 // disk ID
+    ubyte            pad2[2];                    // zero to terminate disk name
+    FileEntry        files[MAX_FILES_PER_DISK];
+    bool             bamWasRead;                 // flag, if BAM was read from disk
+    bool             dirWasRead;                 // flag, if directory was read from disk
+    ubyte            numFilesFound;
+} DiskDescriptor;
+
+// The indexing starts with 0, unlike tracks and sectors
+typedef u16 DiskSectorIndex;
 
 /////////////////////////////////////////////////////////////////////////////////
 // Functions
 
+// Geometry
 ubyte            numSectorsInTrackNr(TrackNr trackNr);
 DiskSectorIndex  trackAndSectorToDiskSectorIndex(TrackNr track_nr, TrackSectorIndex sector_nr);
 TrackNr          diskSectorIndexToTrackNr(DiskSectorIndex disk_sector_index);
 TrackSectorIndex diskSectorIndexToSectorNr(DiskSectorIndex disk_sector_index);
+
+// Disk
 void             clearDiskDescriptor(DiskDescriptor * const disk_descriptor);
+
+// BAM
 void             addBAMToDescriptor(BAM const * bam, DiskDescriptor * const diskDescriptor);
+
+// Directory
+
 
 #endif // DISK_H
