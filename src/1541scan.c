@@ -190,6 +190,7 @@ bool readBAMAndDirectory()
         displayMenu("<- Abort. Reading directory.");
 
         // Now read the directory chain
+        g_disk_descriptor.numFilesFound = 0;
         {
             bool                   end_of_dir_reached;
             DirectoryBlock const * dir_block_ptr;
@@ -239,8 +240,8 @@ bool readBAMAndDirectory()
                 }
 
                 // We increment the track/sector values for the next while loop iteration
-                track_nr   = dir_block_ptr->nextDirectoryTrackNr;
-                sector_idx = dir_block_ptr->nextDirectorySectorIdx;
+                track_nr   = dir_block_ptr->entries[0].chainNextTrackNr;
+                sector_idx = dir_block_ptr->entries[0].chainNextSectorIdx;
 
                 if (true == keyb_userHoldsAbortKey())
                 { abort_operation = true; } // abort on left arrow char

@@ -92,16 +92,18 @@ enum { FILE_TYPE_MASK                  = 0x0f,
 
 typedef struct
 {
-    ubyte fileType;          //  FILE_STATUS_MASK / FILE_TYPE_MASK
+    ubyte chainNextTrackNr;   // Only filled in the 1st entry per directory block,
+    ubyte chainNextSectorIdx; // and they point to the next directory block. Else 0x00.
+
+    ubyte fileType;           //  FILE_STATUS_MASK / FILE_TYPE_MASK
     ubyte fileDataStartTrackNr;
     ubyte fileDataStartSectorIdx;
-    ubyte fileName[16];      // filled to end with 0xa0 (shift-space)
-    ubyte fileRelSectors[2]; // only for REL files
-    ubyte fileRelRecordSize; // only for REL files
-    ubyte pad1[4];           // are to be always 0x00
-    ubyte dosTmpReplace;     // temporary space for DOS and its replace operation
+    ubyte fileName[16];       // filled to end with 0xa0 (shift-space)
+    ubyte fileRelSectors[2];  // only for REL files
+    ubyte fileRelRecordSize;  // only for REL files
+    ubyte pad1[4];            // are to be always 0x00
+    ubyte dosTmpReplace[2];   // temporary space for DOS and its replace operation
     u16   fileSizeInBlocks;
-    ubyte pad[2];
 } FileEntry;
 
 enum {NO_MORE_DIRECTORY_TRACK  = 0x00,
@@ -114,8 +116,6 @@ enum { MAX_DIRECTORY_SECTORS = 18, // Track 18 has 19 dectors but one is occupie
 
 typedef struct
 {
-    ubyte nextDirectoryTrackNr;
-    ubyte nextDirectorySectorIdx;
     FileEntry entries[MAX_FILES_PER_DIRECTORY_SECTOR];
 } DirectoryBlock;
 
