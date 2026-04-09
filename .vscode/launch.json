@@ -1,0 +1,42 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        /*
+        {
+            "type": "6502",
+            "request": "launch",
+            "name": "Debug 1541SCAN (6502 internal)",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/build/1541scan.prg"
+        },
+        */
+        {
+            "type": "vice",
+            "request": "launch",
+            "name": "Debug 1541SCAN (VICE)",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/build/1541scan.prg",
+            "emulatorArgs": [
+                "-autostartprgmode",
+                "1",
+                "-autostartprgdiskimage",
+                "${workspaceFolder}/build/1541scan.prg",
+                "-autostart-delay",
+                "2"
+            ],
+            "viceArgs": [
+                "-autostartprgmode",
+                "1",
+                "-autostartprgdiskimage",
+                "${workspaceFolder}/build/1541scan.prg",
+                "-autostart-delay",
+                "2"
+            ],
+            "hostname": "localhost",
+            "port": 6502
+        }
+    ]
+}
