@@ -31,16 +31,16 @@ void sectorDescriptorToCharAndColor(SectorDescriptor const * const sector_descri
         else
         {
             bool allocated;
-            bool part_of_file;
+            bool used;
             
             dosErrorCharAndColor(sector_descriptor->latest_dos_error, c, color);
 
             if (DOS_EC_OK == sector_descriptor->latest_dos_error)
             {
-                allocated    = (0 != (sector_descriptor->flags & SF_Allocated)) ? true : false;
-                part_of_file = (0 != (sector_descriptor->flags & SF_File)) ?      true : false;
+                allocated    = (0 != (sector_descriptor->flags & SF_Allocated))                      ? true : false;
+                used         = (0 != (sector_descriptor->flags & (SF_File | SF_BAM | SF_Directory))) ? true : false;
 
-                if (allocated != part_of_file)
+                if (allocated != used)
                 { *color = COLOR_YELLOW; }
             }
         }
