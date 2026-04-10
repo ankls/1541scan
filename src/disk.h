@@ -100,7 +100,7 @@ typedef struct
     ubyte fileType;           //  FILE_STATUS_MASK / FILE_TYPE_MASK
     ubyte fileDataStartTrackNr;
     ubyte fileDataStartSectorIdx;
-    ubyte fileName[16];       // filled to end with 0xa0 (shift-space)
+    char  fileName[16];       // filled to end with 0xa0 (shift-space)
     ubyte fileRelSectors[2];  // only for REL files
     ubyte fileRelRecordSize;  // only for REL files
     ubyte pad1[4];            // are to be always 0x00
