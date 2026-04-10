@@ -22,7 +22,11 @@ void clearMenu();
 
 //////////////////////////////////////////////////////////////////////////
 // Screen layout "block hex display"
-void displayBlockData(BlockData const * const block_data);
+void displayBlockDataAsHex(BlockData const * const block_data);
+
+//////////////////////////////////////////////////////////////////////////
+// Screen layout "block PETSCII display"
+void displayBlockDataAsPetscii(BlockData const * const block_data);
 
 //////////////////////////////////////////////////////////////////////////
 // Screen layout "disk block health map"

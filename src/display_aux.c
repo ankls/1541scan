@@ -135,7 +135,7 @@ void clearScreen()
 //////////////////////////////////////////////////////////////////////////
 // Screen layout "block hex display"
 
-void displayBlockData(BlockData const * const block_data)
+void displayBlockDataAsHex(BlockData const * const block_data)
 {
     enum { X_OFFSET = 3, Y_OFFSET = 2 };
 
@@ -180,6 +180,70 @@ void displayBlockData(BlockData const * const block_data)
             idx += column;
             value = block_data->data[idx];
             printf("%c%c", hex[value >> 4], hex[value & 0x0f]);
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Screen layout "block PETSCII display"
+
+void displayBlockDataAsPetscii(BlockData const * const block_data)
+{
+    enum { X_OFFSET = 3, Y_OFFSET = 2 };
+
+    ubyte value;
+    ubyte row;
+    ubyte column;
+
+    unsigned idx;
+
+    clearScreen();
+    gotoxy(0,0);
+    printf("   .0.1.2.3.4.5.6.7.8.9.a.b.c.d.e.f\n");
+    printf("\n");
+    printf("0.\n");
+    printf("1.\n");
+    printf("2.\n");
+    printf("3.\n");
+    printf("4.\n");
+    printf("5.\n");
+    printf("6.\n");
+    printf("7.\n");
+    printf("8.\n");
+    printf("9.\n");
+    printf("a.\n");
+    printf("b.\n");
+    printf("c.\n");
+    printf("d.\n");
+    printf("e.\n");
+    printf("f.\n");
+
+    // 16 bytes per line displayed
+    for (row = 0; row < (BLOCK_SIZE >> 4); ++row)
+    {
+        gotoxy(X_OFFSET, Y_OFFSET + row);
+        for (column = 0; column < 16; ++column)
+        {
+            idx = row;
+            idx <<= 4;
+            idx += column;
+            value = block_data->data[idx];
+            if (value < 0x20)
+            {
+                // non-printable character, display as inverse space
+                value = '.';
+            }
+            else if (value < 0x80)
+            {
+                // printable character, display as is
+            }
+            else if (value < 0xa0)
+            {
+                // inverse character, make it non-inverse
+                value = '.';
+            }
+
+            printf("%c", value);
         }
     }
 }
@@ -264,7 +328,7 @@ void displayStatus(const char * status)
 {
     clearRow(23);
     gotoxy(0,23);
-    printf("Status:%s", status);
+    printf("%s", status);
 }
 
 void clearStatus()
