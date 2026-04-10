@@ -29,6 +29,8 @@ typedef enum { SF_SectorRead     = 0x01, // Does the descriptor contain any usab
                SF_Busy           = 0x04, // Are we busy updating the descriptor's info?
                SF_Allocated      = 0x08, // Marked as occuped in BAM
                SF_File           = 0x10, // Occupied by a file (found by following file block chains)
+               SF_BAM            = 0x20, // Occupied by BAM (found by reading BAM)
+               SF_Directory      = 0x40, // Occupied by directory (found by reading directory)
               } SectorFlags;
 
 typedef struct {
@@ -141,6 +143,9 @@ typedef struct
 
 // The indexing starts with 0, unlike tracks and sectors
 typedef u16 DiskSectorIndex;
+
+extern DiskDescriptor g_disk_descriptor;
+
 
 /////////////////////////////////////////////////////////////////////////////////
 // Functions

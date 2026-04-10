@@ -1,5 +1,7 @@
 #include "disk.h"
 
+DiskDescriptor g_disk_descriptor;
+
 // Note: Index 0 has the value for track 1
 const ubyte SECTORS_PER_TRACK_IDX[TRACKS_PER_DISK] = { 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, // tracks 1..17
                                                    19, 19, 19, 19, 19, 19, 19, // tracks 18..24
