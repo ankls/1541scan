@@ -347,31 +347,121 @@ bool readFiles()
     return abort_operation;
 }
 
+void displaySectorAsHex(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescriptor const * const sd, bool show_as_hex)
+{
+    clearScreen();
+    kio_openChannel(&g_channel_command);
+    kio_openChannel(&g_channel_data);
+    (void) readSector(track_nr, sector_idx, &g_block_buffer);
+    kio_closeChannel(&g_channel_data);
+    kio_closeChannel(&g_channel_command);
+
+    displayBlockDataAsHex(&g_block_buffer);
+    gotoxy(0,19);
+    printf("Track %d Sector %d", track_nr, sector_idx);
+    gotoxy(0,20);
+    printf("DOS error: %s", getLastDriveStatusString()->data);
+    gotoxy(0,21);
+    printf("Flags: %s%s%s%s%s",
+           (0 != (sd->flags & SF_SectorRead))   ? "Read " : "",
+           (0 != (sd->flags & SF_WeakContents)) ? "Weak " : "",
+           (0 != (sd->flags & SF_Busy))         ? "Busy " : "",
+           (0 != (sd->flags & SF_Allocated))    ? "Alloc ": "",
+           (0 != (sd->flags & SF_File))         ? "File " : "",
+           (0 != (sd->flags & SF_BAM))          ? "BAM "  : "",
+           (0 != (sd->flags & SF_Directory))    ? "Dir "  : "");
+    gotoxy(0,22);
+    printf("Checksum: 0x%02x", sd->checksum);
+    gotoxy(0,23);
+    printf("file: %s", (sd->flags & SF_File) ? g_disk_descriptor.files[sd->file_table_idx].fileName : "n/a");
+    (void) keyb_readChar_blocking();
+}
+
+void selectSector(bool show_as_hex)
+{
+    TrackNr track_nr;
+    TrackSectorIndex sector_idx;
+
+    track_nr = 1;
+    sector_idx = 0;
+
+    displayMenu("Move=Cursor Abort=<- Select=Return");
+
+    do
+    {
+        SectorDescriptor * sd;
+        char c;
+
+        sd = &(g_disk_descriptor.descriptor[trackAndSectorToDiskSectorIndex(track_nr, sector_idx)]);
+        sd->flags |= SF_Busy;
+        displaySectorDescriptor(track_nr, sector_idx, sd);
+
+        keyb_clearBufferedChars();
+        c = keyb_readChar_blocking(); // getchar();
+
+        sd->flags &= ~SF_Busy;
+        displaySectorDescriptor(track_nr, sector_idx, sd);
+
+        switch (c)
+        {
+            case 0x91: // up arrow char
+                if (sector_idx > 0)
+                { --sector_idx; }
+                break;
+            case 0x11: // down arrow char
+                if (sector_idx < numSectorsInTrackNr(track_nr) - 1)
+                { ++sector_idx; }
+                break;
+            case 0x9d: // left arrow char
+                if (track_nr > 1)
+                { --track_nr; }
+                break;
+            case 0x1d: // right arrow char
+                if (track_nr < TRACKS_PER_DISK)
+                { ++track_nr; }
+                break;
+            case 0x39: // Arrow left / ESC char, used as abort key in other places, so we use it here as well for consistency
+                return;
+            case 0x0d: // return char
+                displaySectorAsHex(track_nr, sector_idx, sd, show_as_hex);
+                clearScreen();
+                displayTrackAndSectorRulers();
+                displayDiskDescriptor(&g_disk_descriptor);
+                return;
+            default:
+                break;
+        }
+    } while (true);
+
+}
+
+
 
 int main(void)
 {
     ubyte menu_page;
+    bool show_drive_status;
+
     menu_page = 0;
+    show_drive_status = false;
 
     initChannels();
 
     bgcolor(COLOR_BLACK);
     bordercolor(COLOR_GRAY1);
-/*
-    displayBlockData(&g_block_buffer);
-    pause();
-*/
     clearDiskDescriptor(&g_disk_descriptor);
 
     clearScreen();
     displayTrackAndSectorRulers();
     displayDiskDescriptor(&g_disk_descriptor);
+    displayStatus("github.com/ankls/1541scan 2026-04-10");
 
     while (true)
     {
         char selection;
 
-        displayStatus((char const * const) &(getLastDriveStatusString()->data[0]));
+        if (true == show_drive_status)
+        { displayStatus((char const * const) &(getLastDriveStatusString()->data[0])); }
 
         switch(menu_page)
         {
@@ -382,13 +472,15 @@ int main(void)
                 //               Line length
                 //               0123456789012345678901234567890123456789
             case 0: displayMenu("Press space bar to cycle menu."); break;
-            case 1: displayMenu("F1=New F3=ChkWeak F5=- F7=-"); break;
+            case 1: displayMenu("F1=New F3=Weak F5=BlkHex F7=BlkPETSCII"); break;
             case 2: displayMenu("F2=Clear F4=Blks F6=BAM+Dir F8=Files"); break;
         }
 
         keyb_clearBufferedChars();
         selection = keyb_readChar_blocking(); // getchar();
         clearMenu();
+
+        show_drive_status = true; // reset to default after menu selection, some operations disable it
 
         switch (selection)
         {
@@ -422,6 +514,7 @@ int main(void)
             break;
             case CH_F5:
             {
+                selectSector(true /* we want hex display */);
             }
             break;
             case CH_F6:
@@ -431,6 +524,7 @@ int main(void)
             break;
             case CH_F7:
             {
+                selectSector(false /* we want PETSCII display, not hex */);
             }
             break;
             case CH_F8:
@@ -442,12 +536,14 @@ int main(void)
               ++menu_page;
               if (3 == menu_page)
               { menu_page = 1; }
+              break;
             default:
             {
                 clearStatus();
                 clearRow(23);
                 gotoxy(0,23);
                 printf("unknown key 0x%02x", selection);
+                show_drive_status = false;
             }
             break;
         }
