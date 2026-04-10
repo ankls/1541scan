@@ -19,7 +19,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-DiskDescriptor g_disk_descriptor;
 
 // returns false if aborted, else true
 bool readDisk()
@@ -167,7 +166,7 @@ bool readBAMAndDirectory()
 
             sd->latest_dos_error = readSector(18, 0, &g_block_buffer);
 
-            sd->flags |= (SF_SectorRead | SF_Allocated);
+            sd->flags |= (SF_SectorRead | SF_Allocated | SF_BAM);
             sd->flags &= ~SF_Busy;
             displaySectorDescriptor(18, 0, sd);
         }
@@ -213,7 +212,7 @@ bool readBAMAndDirectory()
 
                 // This fills the buffer with new data, which we access via dir_block_ptr
                 sd->latest_dos_error = readSector(track_nr, sector_idx, &g_block_buffer);
-                sd->flags |= (SF_SectorRead | SF_Allocated);
+                sd->flags |= (SF_SectorRead | SF_Allocated | SF_Directory);
 
                 sd->flags &= ~SF_Busy;
                 displaySectorDescriptor(track_nr, sector_idx, sd);
@@ -383,7 +382,7 @@ int main(void)
                 //               Line length
                 //               0123456789012345678901234567890123456789
             case 0: displayMenu("Press space bar to cycle menu."); break;
-            case 1: displayMenu("F1=New F3=- F5=Weak F7=-"); break;
+            case 1: displayMenu("F1=New F3=ChkWeak F5=- F7=-"); break;
             case 2: displayMenu("F2=Clear F4=Blks F6=BAM+Dir F8=Files"); break;
         }
 
@@ -413,6 +412,7 @@ int main(void)
             break;
             case CH_F3:
             {
+                checkForWeakBlocks();
             }
             break;
             case CH_F4:
@@ -422,7 +422,6 @@ int main(void)
             break;
             case CH_F5:
             {
-                checkForWeakBlocks();
             }
             break;
             case CH_F6:
