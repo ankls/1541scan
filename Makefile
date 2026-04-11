@@ -10,17 +10,11 @@ SOURCES = ../src/errors.c \
 
 TARGET = 1541scan
 
-#all:
-#	cl65 -Oirs -I/usr/lib64/cc65/include -L/usr/lib64/cc65 $(SOURCES) -o build/${TARGET}
-
-#-m 1541scan.map
-
-#all-asm:
 debug:
-	rm -rf build && mkdir build
-	cd build && cl65 -Oirs -I/usr/lib64/cc65/include -I../src -L/usr/lib64/cc65  -vm -T -l 1541scan.asm -v $(SOURCES) -Wl "--mapfile,${TARGET}.map" -Wl "--dbgfile,${TARGET}.dbg" -o ${TARGET}.prg
+	mkdir -p build
+	cd build && cl65 -Oirs -I/usr/lib64/cc65/include -I../src -L/usr/lib64/cc65  -vm -T -l 1541scan.asm -v $(SOURCES) -Wl "--mapfile,${TARGET}.map" -Wl "--dbgfile,${TARGET}.prg.dbg" -o ${TARGET}.prg
 
-all: debug
+all: clean debug
 	echo Done
 
 move:
@@ -42,7 +36,7 @@ scratchall:
 	cbmctrl status 8
 
 copy:
-	cbmcopy -w 8 1541scan
+	cbmcopy -w 8 build/1541scan.prg
 
 clean:
-	rm 1541scan
+	rm -Rf build
