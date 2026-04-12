@@ -10,6 +10,17 @@ Limits:
 
 **Key functions**
 
+- F1: The operations of F2, F6, F8, and then F6 in one sequence.
+- F2: Forget everything about any previous disk.
+- F3: Read all previously read sectors again, if they had read errors. Mark them as 'weak', if the checksum is different than first time.
+- F4: Read all blocks of the disk that weren't read yet.
+- F5: Select a block and inspect its contents as hex.
+- F6: Read block allocation map (BAM) and directory sectors. Learn about disk name, files, etc.
+- F7: Select a block and inspect its contents as PETSCII codes.
+- F8: Read all files.
+
+On operations taking longer, the key "<-" (top left key on the keyboard) aborts the operation.
+
 Design notes
 
 - Sectors that were not read are shown as `?` in a dim gray (`COLOR_GRAY1`).
