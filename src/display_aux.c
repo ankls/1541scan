@@ -340,9 +340,17 @@ void clearStatus()
 
 void displayMenu(const char * menu)
 {
-    clearRow(24);
-    gotoxy(0,24);
-    printf("%s", menu);
+    u16 i;
+    for (i = 40*24; i < (40*24+40); ++i)
+    {
+        char c = *menu;
+        if ('\0' == c)
+        { c = ' '; }
+        else
+        { ++menu; } // make it inverse
+        POKE(0x400 + i, c | 0x80); // Print a space at each position on the screen using direct memory access
+        POKE(COLOR_RAM + i, COLOR_LIGHTBLUE);
+    }
 }
 
 void clearMenu()
