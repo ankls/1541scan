@@ -250,6 +250,7 @@ bool readBAMAndDirectory()
                 // protect against corrupted or protected disks and stops us from infinite reads.
                 end_of_dir_reached = (NO_MORE_DIRECTORY_TRACK == track_nr)
                                   || (MAX_DIRECTORY_SECTORS == num_dir_sectors_read)
+                                  || (DOS_EC_OK != sd->latest_dos_error)
                                   || (true == abort_operation);
             }
 
@@ -265,7 +266,8 @@ bool readBAMAndDirectory()
 
 bool readFiles()
 {
-    bool abort_operation = false;
+    bool user_abort = false;
+    bool error_abort = false;
     ubyte file_idx;
 
     if (false == g_disk_descriptor.dirWasRead)
@@ -276,10 +278,9 @@ bool readFiles()
 
     displayMenu("<- Abort. Reading all files.");
 
-    for (file_idx = 0; (file_idx < g_disk_descriptor.numFilesFound) && (false == abort_operation); ++file_idx)
+    for (file_idx = 0; (file_idx < g_disk_descriptor.numFilesFound) && (false == user_abort); ++file_idx)
     {
         FileEntry *      fe_ptr;
-        u16              blocks_read; // Used to break loops due to protections or corruption
         TrackNr          track_nr;
         TrackSectorIndex sector_idx;
 
@@ -289,12 +290,18 @@ bool readFiles()
         track_nr = fe_ptr->fileDataStartTrackNr;
         sector_idx = fe_ptr->fileDataStartSectorIdx;
 
+        error_abort = false;
+
         while (  (NO_MORE_FILE_TRACK != track_nr) // This is the exit condition (track 0) for a sane disk
               && (TRACKS_PER_DISK >= track_nr)    // Maybe due to corruption or copy protection
               && (numSectorsInTrackNr(track_nr) > sector_idx) // same as above
-              && (false == abort_operation))
+              && (false == user_abort)
+              && (false == error_abort) )
         {
             SectorDescriptor * sd;
+
+            if (true == keyb_userHoldsAbortKey())
+            { user_abort = true; } // abort on left arrow char
 
             sd = &(g_disk_descriptor.descriptor[trackAndSectorToDiskSectorIndex(track_nr, sector_idx)]);
 
@@ -317,24 +324,27 @@ bool readFiles()
                 sd->checksum = calculateBlockChecksum(&g_block_buffer);
             }
 
-            sd->flags          |= SF_File;
-            sd->file_table_idx =  file_idx;
-
+            if (0 == (sd->flags & SF_File))
+            {
+                // Mark that we found file data in this sector.
+                sd->flags          |= SF_File;
+                sd->file_table_idx =  file_idx;
+            }
+            else
+            {
+                // We were here already with this or another file,
+                // so we're in a loop. This can be due to copy protection or disk corruption,
+                // so we break out of the loop to avoid an infinite loop.
+                error_abort = true;
+            }
+            
             // Remove busy marker
             sd->flags &= ~SF_Busy;
             displaySectorDescriptor(track_nr, sector_idx, sd);
 
-            // Follow the chain
+            // Follow the chain (won't matter if we abort)
             track_nr   = g_block_buffer.data[0];
             sector_idx = g_block_buffer.data[1];
-
-            if (true == keyb_userHoldsAbortKey())
-            { abort_operation = true; } // abort on left arrow char
-
-            // Protect against loops
-            ++blocks_read;
-            if (SECTORS_PER_DISK == blocks_read)
-            { break; }
         }
 
     }
@@ -344,10 +354,10 @@ bool readFiles()
     kio_closeChannel(&g_channel_data);
     kio_closeChannel(&g_channel_command);
 
-    return abort_operation;
+    return user_abort;
 }
 
-void displaySectorAsHex(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescriptor const * const sd, bool show_as_hex)
+void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescriptor const * const sd, bool show_as_hex)
 {
     clearScreen();
     kio_openChannel(&g_channel_command);
@@ -356,7 +366,10 @@ void displaySectorAsHex(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDes
     kio_closeChannel(&g_channel_data);
     kio_closeChannel(&g_channel_command);
 
-    displayBlockDataAsHex(&g_block_buffer);
+    if (true == show_as_hex)
+    { displayBlockDataAsHex(&g_block_buffer); }
+    else
+    { displayBlockDataAsPetscii(&g_block_buffer); }
     gotoxy(0,19);
     printf("Track %d Sector %d", track_nr, sector_idx);
     gotoxy(0,20);
@@ -423,7 +436,7 @@ void selectSector(bool show_as_hex)
             case 0x39: // Arrow left / ESC char, used as abort key in other places, so we use it here as well for consistency
                 return;
             case 0x0d: // return char
-                displaySectorAsHex(track_nr, sector_idx, sd, show_as_hex);
+                displaySector(track_nr, sector_idx, sd, show_as_hex);
                 clearScreen();
                 displayTrackAndSectorRulers();
                 displayDiskDescriptor(&g_disk_descriptor);
@@ -454,7 +467,7 @@ int main(void)
     clearScreen();
     displayTrackAndSectorRulers();
     displayDiskDescriptor(&g_disk_descriptor);
-    displayStatus("github.com/ankls/1541scan 2026-04-10");
+    displayStatus("github.com/ankls/1541scan 2026-04-12");
 
     while (true)
     {
