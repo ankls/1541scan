@@ -10,7 +10,7 @@ Limits:
 
 **Key functions**
 
-- F1: The operations of F2, F6, F8, and then F6 in one sequence.
+- F1: The operations of F2, F6, F8, and then F4 in one sequence.
 - F2: Forget everything about any previous disk.
 - F3: Read all previously read sectors again, if they had read errors. Mark them as 'weak', if the checksum is different than first time.
 - F4: Read all blocks of the disk that weren't read yet.
