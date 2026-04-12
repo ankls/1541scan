@@ -89,7 +89,7 @@ bool sendDirectCommandBP(ubyte offset)
     g_command_buffer.data[2] = 80; // PETSCII 'p'
     g_command_buffer.data[3] = 58; // PETSCII ':'
     g_command_buffer.data[4] = 48 + g_channel_data.drive_channel; // PETSCII '0' + drive channel
-    g_command_buffer.data[5] = offset; // Docs unclear: PETSCII or binary
+    g_command_buffer.data[5] = offset; // binary
 
     return (SEND_TO_DRIVE(&g_channel_command, &(g_command_buffer.data[0]), 6, &bytes_written)
            && (bytes_written == 6))
@@ -107,9 +107,9 @@ bool sendDirectCommandMR(u16 floppy_memory_address, u16 len)
     g_command_buffer.data[0] = 77; // PETSCII 'm'
     g_command_buffer.data[1] = 45; // PETSCII '-'
     g_command_buffer.data[2] = 82; // PETSCII 'r'
-    g_command_buffer.data[3] = floppy_memory_address % 0xff; // low address byte
-    g_command_buffer.data[4] = floppy_memory_address >> 8;   // high address byte
-    g_command_buffer.data[5] = len;                          // amount of bytes
+    g_command_buffer.data[3] = floppy_memory_address % 0xff; // binary, low address byte
+    g_command_buffer.data[4] = floppy_memory_address >> 8;   // binary, high address byte
+    g_command_buffer.data[5] = len;                          // binary, amount of bytes
 
     return (SEND_TO_DRIVE(&g_channel_command, &(g_command_buffer.data[0]), 6, &bytes_written)
            && (bytes_written == 6))
@@ -177,4 +177,3 @@ DOS_ERROR_CODE readSector(TrackNr track_nr, TrackSectorIndex sector_idx, BlockDa
     else
     { return DOS_EC_OK; }
 }
-

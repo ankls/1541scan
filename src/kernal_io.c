@@ -247,7 +247,6 @@ KERNAL_ST_SERIAL_STATUS kio_readFromDrive(Channel const * const channel, ubyte *
         }
     }
 
-    
     *bytes_read = (DOS_EC_OK == st) ? (idx+1) : 0;
 
     (void) KERNAL_CLRCHN();
