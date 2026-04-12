@@ -2,13 +2,13 @@
 
 This tool is intended to help judging the health of a C64 floppy disk using a 1541 floppy. The user interface is meant to be used quickly, e.g. insert a disk, press F1, let the program do its job, come back some minutes later, and decide yourself what to do.
 
-Limits:
+**Limits**
 - The tool does not modify the disk (e.g. to try repairing the data).
 - The tool is not meant to be fast or small.
-- The tool uses the 1541 DOS commands. It does not load a program to the floppy drive. All issues that the Commodore DOS does not find stays hidden.
+- The tool uses the 1541 DOS commands. It does not load a program to the floppy drive. All issues that the Commodore DOS does not find stay hidden.
 - The tool doesn't know about copy protections. It doesn't look for sector alignment on tracks, doesn't know more than 35 tracks, can't discern an intentionally weak sector from a corruption etc. This judgement is up to you as a user.
 
-**Key functions**
+**Keys**
 
 - F1: The operations of F2, F6, F8, and then F4 in one sequence.
 - F2: Forget everything about any previous disk.
@@ -21,7 +21,7 @@ Limits:
 
 On operations taking longer, the key "<-" (top left key on the keyboard) aborts the operation.
 
-Design notes
+**Design notes**
 
 - Sectors that were not read are shown as `?` in a dim gray (`COLOR_GRAY1`).
 - Busy sectors (drive or operation busy) are shown with character code `105` and `COLOR_WHITE`.
@@ -30,7 +30,7 @@ Design notes
 - After selecting the character, the code sets or clears the high bit (0x80) to make allocated sectors display as inverse (on C64 the screen charset uses the high bit to invert). Free sectors have the high bit cleared.
 - If a sector is allocated but not "used" (or vice versa), the code sets the color to `COLOR_YELLOW` to indicate an inconsistency.
 
-Colors used (approximate, for examples below)
+**Colors used (approximate, for examples below)**
 
 - `COLOR_WHITE`  → #FFFFFF
 - `COLOR_GRAY1`  → #AAAAAA
