@@ -1,13 +1,14 @@
-# 1541scan — Sector Display Encoding
+# 1541scan — Inspecting C64 floppy disks for health
 
-This document explains how `src/display_aux.c` maps `SectorDescriptor` and DOS error codes to screen characters and colors.
+This tool is intended to help judging the health of a C64 floppy disk using a 1541 floppy. The user interface is meant to be used quickly, e.g. insert a disk, press F1, let the program do its job, come back some minutes later, and decide yourself what to do.
 
-Files inspected: `src/display_aux.c`
+Limits:
+- The tool does not modify the disk (e.g. to try repairing the data).
+- The tool is not meant to be fast or small.
+- The tool uses the 1541 DOS commands. It does not load a program to the floppy drive. All issues that the Commodore DOS does not find stays hidden.
+- The tool doesn't know about copy protections. It doesn't look for sector alignment on tracks, doesn't know more than 35 tracks, can't discern an intentionally weak sector from a corruption etc. This judgement is up to you as a user.
 
 **Key functions**
-
-- `sectorDescriptorToCharAndColor(...)`: chooses the character and color for a sector cell, then toggles the PETSCII high bit to make allocated sectors inverse.
-- `dosErrorCharAndColor(...)`: maps DOS error codes to a display character and foreground color.
 
 Design notes
 
@@ -103,3 +104,8 @@ Below are two screenshots captured from the program showing the disk display:
 ![While reading empty blocks](./Screen_WhileReadingEmptyBlocks.png)
 
 *Figure: Disk display while scanning empty blocks.*
+
+## License
+
+This tool is distributed under the MIT license. See LICENSE file.
+
