@@ -94,18 +94,18 @@ enum { FILE_TYPE_MASK                  = 0x0f,
 
 typedef struct
 {
-    ubyte chainNextTrackNr;   // Only filled in the 1st entry per directory block,
-    ubyte chainNextSectorIdx; // and they point to the next directory block. Else 0x00.
+    ubyte chainNextTrackNr;           // Only filled in the 1st entry per directory block,
+    ubyte chainNextSectorIdx;         // and they point to the next directory block. Else 0x00.
 
-    ubyte fileType;           //  FILE_STATUS_MASK / FILE_TYPE_MASK
-    ubyte fileDataStartTrackNr;
-    ubyte fileDataStartSectorIdx;
-    char  fileName[16];       // filled to end with 0xa0 (shift-space)
-    ubyte fileRelSectors[2];  // only for REL files
-    ubyte fileRelRecordSize;  // only for REL files
-    ubyte pad1[4];            // are to be always 0x00
-    ubyte dosTmpReplace[2];   // temporary space for DOS and its replace operation
-    u16   fileSizeInBlocks;
+    ubyte file_type;                  //  FILE_STATUS_MASK / FILE_TYPE_MASK
+    ubyte file_data_start_track_nr;
+    ubyte file_data_start_sector_idx;
+    char  file_name[16];              // filled to end with 0xa0 (shift-space)
+    ubyte file_rel_sectors[2];        // only for REL files
+    ubyte file_rel_record_size;       // only for REL files
+    ubyte pad1[4];                    // are to be always 0x00
+    ubyte dos_tmp_replace[2];         // temporary space for DOS and its replace operation
+    u16   file_size_in_blocks;
 } FileEntry;
 
 enum {NO_MORE_DIRECTORY_TRACK  = 0x00,
@@ -136,9 +136,9 @@ typedef struct
     char             disk_id[2];                 // disk ID
     ubyte            pad2[2];                    // zero to terminate disk name
     FileEntry        files[MAX_FILES_PER_DISK];
-    bool             bamWasRead;                 // flag, if BAM was read from disk
-    bool             dirWasRead;                 // flag, if directory was read from disk
-    ubyte            numFilesFound;
+    bool             bam_was_read;               // flag, if BAM was read from disk
+    bool             dir_was_read;               // flag, if directory was read from disk
+    ubyte            num_files_found;
 } DiskDescriptor;
 
 // The indexing starts with 0, unlike tracks and sectors

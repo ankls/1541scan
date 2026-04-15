@@ -189,7 +189,7 @@ bool readBAMAndDirectory()
         displayMenu("<- Abort. Reading directory.");
 
         // Now read the directory chain
-        g_disk_descriptor.numFilesFound = 0;
+        g_disk_descriptor.num_files_found = 0;
         {
             bool                   end_of_dir_reached;
             DirectoryBlock const * dir_block_ptr;
@@ -224,13 +224,13 @@ bool readBAMAndDirectory()
                 {
                     fe_ptr = &(dir_block_ptr->entries[file_in_sector_idx]);
                     // Check, if the entry is empty
-                    if ((FILE_STATUS_NORMAL | FILE_TYPE_DELETED) != fe_ptr->fileType)
+                    if ((FILE_STATUS_NORMAL | FILE_TYPE_DELETED) != fe_ptr->file_type)
                     {
                         // This entry contains useful data
-                        memcpy(&(g_disk_descriptor.files[g_disk_descriptor.numFilesFound]),
+                        memcpy(&(g_disk_descriptor.files[g_disk_descriptor.num_files_found]),
                                fe_ptr,
                                sizeof(FileEntry)); 
-                        ++(g_disk_descriptor.numFilesFound);
+                        ++(g_disk_descriptor.num_files_found);
                     }
                     // Note: We skip over empty directories and do not enter
                     // these in the disk descriptor. So the indices in the descriptor
@@ -254,7 +254,7 @@ bool readBAMAndDirectory()
                                   || (true == abort_operation);
             }
 
-            g_disk_descriptor.dirWasRead = (false == abort_operation);
+            g_disk_descriptor.dir_was_read = (false == abort_operation);
         }
     }
 
@@ -270,7 +270,7 @@ bool readFiles()
     bool error_abort = false;
     ubyte file_idx;
 
-    if (false == g_disk_descriptor.dirWasRead)
+    if (false == g_disk_descriptor.dir_was_read)
     { readBAMAndDirectory(); }
 
     kio_openChannel(&g_channel_command);
@@ -278,7 +278,7 @@ bool readFiles()
 
     displayMenu("<- Abort. Reading all files.");
 
-    for (file_idx = 0; (file_idx < g_disk_descriptor.numFilesFound) && (false == user_abort); ++file_idx)
+    for (file_idx = 0; (file_idx < g_disk_descriptor.num_files_found) && (false == user_abort); ++file_idx)
     {
         FileEntry *      fe_ptr;
         TrackNr          track_nr;
@@ -313,7 +313,7 @@ bool readFiles()
             if (DOS_EC_OK != sd->latest_dos_error)
             { displayStatus((char const * const) &(getLastDriveStatusString()->data[0])); }
             else
-            { displayStatus((char const * const) fe_ptr->fileName); }
+            { displayStatus((char const * const) fe_ptr->file_name); }
 
             // If we didn't read this sector already in another pass,
             // then mark this as read now. And, while we're at it,
@@ -386,7 +386,7 @@ void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
     gotoxy(0,22);
     printf("Checksum: 0x%02x", sd->checksum);
     gotoxy(0,23);
-    printf("file: %s", (sd->flags & SF_File) ? g_disk_descriptor.files[sd->file_table_idx].fileName : "n/a");
+    printf("file: %s", (sd->flags & SF_File) ? g_disk_descriptor.files[sd->file_table_idx].file_name : "n/a");
     (void) keyb_readChar_blocking();
 }
 

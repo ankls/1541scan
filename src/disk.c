@@ -79,9 +79,9 @@ void clearDiskDescriptor(DiskDescriptor * const disk_descriptor)
         disk_descriptor->pad2[1] = '\0';
     }
 
-    disk_descriptor->bamWasRead = false;
-    disk_descriptor->dirWasRead = false;
-    disk_descriptor->numFilesFound = 0;
+    disk_descriptor->bam_was_read = false;
+    disk_descriptor->dir_was_read = false;
+    disk_descriptor->num_files_found = 0;
 }
 
 // Computes the checksum byte of a block
@@ -140,5 +140,5 @@ void addBAMToDescriptor(BAM const * bam, DiskDescriptor * const disk_descriptor)
     disk_descriptor->disk_id[0] = bam->disk_id[0];
     disk_descriptor->disk_id[1] = bam->disk_id[1];
 
-    disk_descriptor->bamWasRead = true;
+    disk_descriptor->bam_was_read = true;
 }
