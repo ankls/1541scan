@@ -287,8 +287,8 @@ bool readFiles()
         fe_ptr = &(g_disk_descriptor.files[file_idx]);
 
         // The beginning of the block chain is in the fe_ptr
-        track_nr = fe_ptr->fileDataStartTrackNr;
-        sector_idx = fe_ptr->fileDataStartSectorIdx;
+        track_nr = fe_ptr->file_data_start_track_nr;
+        sector_idx = fe_ptr->file_data_start_sector_idx;
 
         error_abort = false;
 
