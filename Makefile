@@ -1,18 +1,18 @@
-SOURCES = ../src/errors.c \
-          ../src/disk.c \
-          ../src/channel.c \
-		  ../src/kernal_io.c \
-		  ../src/opencbm_io.c \
-          ../src/dos_io.c \
-          ../src/display_aux.c \
-		  ../src/keyboard.c \
-          ../src/1541scan.c
+SOURCES = $(abspath src/errors.c) \
+          $(abspath src/disk.c) \
+          $(abspath src/channel.c) \
+		  $(abspath src/kernal_io.c) \
+		  $(abspath src/opencbm_io.c) \
+          $(abspath src/dos_io.c) \
+          $(abspath src/display_aux.c) \
+		  $(abspath src/keyboard.c) \
+          $(abspath src/1541scan.c
 
 TARGET = 1541scan
 
 debug:
 	mkdir -p build
-	cd build && cl65 -Oirs -I/usr/lib64/cc65/include -I../src -L/usr/lib64/cc65  -vm -T -l 1541scan.asm -v $(SOURCES) -Wl "--mapfile,${TARGET}.map" -Wl "--dbgfile,${TARGET}.prg.dbg" -o ${TARGET}.prg
+	cd build && cl65 -Oir -g -I/usr/lib64/cc65/include -I../src -L/usr/lib64/cc65/include -I../src -L/usr/lib64/cc65  -vm -T -l 1541scan.asm -v $(SOURCES) -Wl "--mapfile,${TARGET}.map" -Wl "--dbgfile,${TARGET}.prg.dbg" -o ${TARGET}.prg
 
 all: clean debug
 	echo Done
