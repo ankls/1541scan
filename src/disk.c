@@ -142,3 +142,31 @@ void addBAMToDescriptor(BAM const * bam, DiskDescriptor * const disk_descriptor)
 
     disk_descriptor->bam_was_read = true;
 }
+
+const char * fileTypeToString(ubyte file_type)
+{
+    switch (file_type & FILE_TYPE_MASK)
+    {
+        case FILE_TYPE_DELETED:               return "DEL";
+        case FILE_TYPE_SEQUENTIAL:            return "SEQ";
+        case FILE_TYPE_PROGRAM:               return "PRG";
+        case FILE_TYPE_USER:                  return "USR";
+        case FILE_TYPE_RELATIVE:              return "REL";
+        default:                              return "???";
+    }
+}
+
+const char * fileFlagsToString(ubyte file_type)
+{
+    switch (file_type & (FILE_FLAG_SAVING | FILE_FLAG_LOCKED | FILE_FLAG_CLOSED))
+    {
+        case FILE_FLAG_SAVING:                                       return "@ *";
+        case FILE_FLAG_LOCKED:                                       return " >*";
+        case FILE_FLAG_CLOSED:                                       return "OK ";
+        case FILE_FLAG_SAVING | FILE_FLAG_LOCKED:                    return "@>*";
+        case FILE_FLAG_SAVING | FILE_FLAG_CLOSED:                    return "@  ";
+        case FILE_FLAG_LOCKED | FILE_FLAG_CLOSED:                    return " > ";
+        case FILE_FLAG_SAVING | FILE_FLAG_LOCKED | FILE_FLAG_CLOSED: return "@> ";
+        default:                                                     return "???";
+    }
+}

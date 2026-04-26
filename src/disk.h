@@ -121,6 +121,9 @@ typedef struct
     FileEntry entries[MAX_FILES_PER_DIRECTORY_SECTOR];
 } DirectoryBlock;
 
+const char * fileTypeToString(ubyte file_type);
+const char * fileFlagsToString(ubyte file_type);
+
 
 /////////////////////////////////////////////////////////////////////////////////
 // Disk-related definitions
