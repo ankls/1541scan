@@ -227,8 +227,10 @@ KERNAL_ST_SERIAL_STATUS kio_readFromDrive(Channel const * const channel, ubyte *
 {
     KERNAL_ST_SERIAL_STATUS st;
     u16 idx;
+    (void) KERNAL_CLRCHN(); // Clear channel first to be sure we're in a clean state, and that the drive is ready to send data. This also has the effect of resetting the drive's internal state machine for the next read operation, which is important to ensure that the drive sends the expected data in response to our read requests.
 
     (void) KERNAL_CHKIN(channel->logical_file_number); // Select channel for input
+    st = KERNAL_READST();
 
     for (idx = 0; (idx < buffer_length); ++idx)
     {
