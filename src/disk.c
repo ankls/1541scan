@@ -60,6 +60,7 @@ void clearDiskDescriptor(DiskDescriptor * const disk_descriptor)
             disk_descriptor->descriptor[idx16].flags            = 0x00;
             disk_descriptor->descriptor[idx16].latest_dos_error = DOS_EC_OK;
             disk_descriptor->descriptor[idx16].file_table_idx   = 0;
+            disk_descriptor->descriptor[idx16].checksum         = 0;
             disk_descriptor->descriptor[idx16].file_successor_track_nr   = NO_MORE_FILE_TRACK;
             disk_descriptor->descriptor[idx16].file_successor_sector_idx = 0;
         }
