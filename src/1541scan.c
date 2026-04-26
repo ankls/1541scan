@@ -438,9 +438,6 @@ void selectSector()
             case CH_F1: // F1 key
             case CH_F3: // F3 key
                 displaySector(track_nr, sector_idx, sd, CH_F1 == c /* show_as_hex */);
-                clearScreen();
-                displayTrackAndSectorRulers();
-                displayDiskDescriptor(&g_disk_descriptor);
                 return;
             default:
                 break;
@@ -533,6 +530,9 @@ int main(void)
             case CH_F5:
             {
                 selectSector();
+                clearScreen();
+                displayTrackAndSectorRulers();
+                displayDiskDescriptor(&g_disk_descriptor);
             }
             break;
             case CH_F6:
@@ -542,6 +542,10 @@ int main(void)
             break;
             case CH_F7:
             {
+                displayDirectoryOverview();
+                clearScreen();
+                displayTrackAndSectorRulers();
+                displayDiskDescriptor(&g_disk_descriptor);
             }
             break;
             case CH_F8:
