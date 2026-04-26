@@ -80,11 +80,11 @@ typedef struct
 /////////////////////////////////////////////////////////////////////////////////
 // Directory
 
-enum { FILE_STATUS_MASK                = 0xf0,
-       FILE_STATUS_NORMAL              = 0x00,
-       FILE_STATUS_DELETED             = 0x80,
-       FILE_STATUE_DELETED_REPLACEMENT = 0xa0,
-       FILE_STATUS_LOCKED              = 0xC0};
+enum { FILE_FLAGS_MASK                = 0xf0,
+       FILE_FLAG_UNUSED               = 0x10,
+       FILE_FLAG_SAVING               = 0x20,
+       FILE_FLAG_LOCKED               = 0x40,
+       FILE_FLAG_CLOSED               = 0x80 };
 enum { FILE_TYPE_MASK                  = 0x0f,
        FILE_TYPE_DELETED               = 0x00,
        FILE_TYPE_SEQUENTIAL            = 0x01,

@@ -224,7 +224,7 @@ bool readBAMAndDirectory()
                 {
                     fe_ptr = &(dir_block_ptr->entries[file_in_sector_idx]);
                     // Check, if the entry is empty
-                    if ((FILE_STATUS_NORMAL | FILE_TYPE_DELETED) != fe_ptr->file_type)
+                    if (FILE_TYPE_DELETED != fe_ptr->file_type)
                     {
                         // This entry contains useful data
                         memcpy(&(g_disk_descriptor.files[g_disk_descriptor.num_files_found]),
