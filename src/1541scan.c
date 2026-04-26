@@ -390,7 +390,7 @@ void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
     (void) keyb_readChar_blocking();
 }
 
-void selectSector(bool show_as_hex)
+void selectSector()
 {
     TrackNr track_nr;
     TrackSectorIndex sector_idx;
@@ -398,7 +398,7 @@ void selectSector(bool show_as_hex)
     track_nr = 1;
     sector_idx = 0;
 
-    displayMenu("Move=Cursor Abort=<- Select=Return");
+    displayMenu("Abort=<- Cursor=Move F1=ShowHex F3=ShowPetscii");
 
     do
     {
@@ -435,8 +435,9 @@ void selectSector(bool show_as_hex)
                 break;
             case 0x39: // Arrow left / ESC char, used as abort key in other places, so we use it here as well for consistency
                 return;
-            case 0x0d: // return char
-                displaySector(track_nr, sector_idx, sd, show_as_hex);
+            case CH_F1: // F1 key
+            case CH_F3: // F3 key
+                displaySector(track_nr, sector_idx, sd, CH_F1 == c /* show_as_hex */);
                 clearScreen();
                 displayTrackAndSectorRulers();
                 displayDiskDescriptor(&g_disk_descriptor);
@@ -485,8 +486,8 @@ int main(void)
                 //               Line length
                 //               0123456789012345678901234567890123456789
             case 0: displayMenu("Press space bar to cycle menu."); break;
-            case 1: displayMenu("F1=New F3=Weak F5=BlkHex F7=BlkPETSCII"); break;
-            case 2: displayMenu("F2=Clear F4=Blks F6=BAM+Dir F8=Files"); break;
+            case 1: displayMenu("F1=New F3=Weak F5=Block F7=(unused)"); break;
+            case 2: displayMenu("F2=Clear F4=Blks F6=BAM+Dir F8=RdFiles"); break;
         }
 
         keyb_clearBufferedChars();
@@ -527,7 +528,7 @@ int main(void)
             break;
             case CH_F5:
             {
-                selectSector(true /* we want hex display */);
+                selectSector();
             }
             break;
             case CH_F6:
@@ -537,7 +538,6 @@ int main(void)
             break;
             case CH_F7:
             {
-                selectSector(false /* we want PETSCII display, not hex */);
             }
             break;
             case CH_F8:
