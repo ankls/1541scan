@@ -329,6 +329,8 @@ bool readFiles()
                 // Mark that we found file data in this sector.
                 sd->flags          |= SF_File;
                 sd->file_table_idx =  file_idx;
+                sd->file_successor_track_nr   = g_block_buffer.data[0];
+                sd->file_successor_sector_idx = g_block_buffer.data[1];
             }
             else
             {

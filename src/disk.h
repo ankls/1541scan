@@ -38,6 +38,8 @@ typedef struct {
     DOSErrorCode            latest_dos_error;
     ubyte                   checksum;
     ubyte                   file_table_idx;
+    ubyte                   file_successor_track_nr;   // Points to the next block in the file, otherwise NO_MORE_FILE_TRACK/0x00 at end of chain.
+    ubyte                   file_successor_sector_idx; // Only meaningful if file_successor_track_nr is != NO_MORE_FILE_TRACK.
 } SectorDescriptor;
 
 
