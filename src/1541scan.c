@@ -448,6 +448,80 @@ void selectSector()
 
 }
 
+const char * fileIndexToHealthString(ubyte file_index)
+{
+    // We rely on the file with the proper index to be present in our structures,
+    // so ensure that first before calling this function.
+    // We walk the file blocks and see that all blocks are readable and not weak.
+    // If so, we return "OK ", else "DMG".
+    FileEntry * fe_ptr;
+    SectorDescriptor * sd;
+    TrackNr track_nr;
+    TrackSectorIndex sector_idx;
+    u16 counter; // to catch circles in successor chain, which can be due to copy protection or disk corruption
+
+    fe_ptr = &(g_disk_descriptor.files[file_index]);
+    track_nr = fe_ptr->file_data_start_track_nr;
+    sector_idx = fe_ptr->file_data_start_sector_idx;
+    counter = 0;
+
+    while (counter < SECTORS_PER_DISK)
+    {
+        sd = &(g_disk_descriptor.descriptor[trackAndSectorToDiskSectorIndex(track_nr, sector_idx)]);
+
+        // check if this block is ok
+        if (  (0 == (sd->flags & SF_SectorRead))
+           || (0 != (sd->flags & SF_WeakContents))
+           || (DOS_EC_OK != sd->latest_dos_error)
+           || (FILE_TYPE_DELETED == fe_ptr->file_type))
+        { return "DMG"; }
+
+        // See if there is a successor block in the file, if not, we're done and can return OK
+        if (NO_MORE_FILE_TRACK == sd->file_successor_track_nr)
+        { return "OK "; }
+
+        track_nr = sd->file_successor_track_nr;
+        sector_idx = sd->file_successor_sector_idx;
+
+        ++counter;
+    }
+
+    return "DMG";
+}
+
+void displayDirectoryOverview()
+{
+    clearScreen();
+    // Leverage the fact that we read the directory already in the disk descriptor.
+
+    {
+        ubyte file_idx;
+        ubyte file_display_offset = 0;
+
+        gotoxy(0,0);
+        //      0123456789012345678901234567890123456789
+        printf("Nr Name             Tp. Sta Siz Chk");
+
+        for (file_idx = file_display_offset; (file_idx < g_disk_descriptor.num_files_found) && (file_idx < file_display_offset + 20); ++file_idx)
+        {
+            FileEntry * fe_ptr;
+
+            fe_ptr = &(g_disk_descriptor.files[file_idx]);
+
+            gotoxy(0, 1 + file_idx - file_display_offset);
+            printf("%2d %16s %3s %3s %03d %3s",
+                   file_idx + 1,
+                   fe_ptr->file_name,
+                   fileTypeToString(fe_ptr->file_type),
+                   fileFlagsToString(fe_ptr->file_type),
+                   fe_ptr->file_size_in_blocks,
+                   fileIndexToHealthString(file_idx));
+        }
+    }
+    gotoxy(0,23);
+    printf("Display limited to 20 files.\n"); // todo implement scrolling if more files
+    pause();
+}
 
 
 int main(void)
@@ -486,7 +560,7 @@ int main(void)
                 //               Line length
                 //               0123456789012345678901234567890123456789
             case 0: displayMenu("Press space bar to cycle menu."); break;
-            case 1: displayMenu("F1=New F3=Weak F5=Block F7=(unused)"); break;
+            case 1: displayMenu("F1=New F3=Weak F5=Block F7=Files"); break;
             case 2: displayMenu("F2=Clear F4=Blks F6=BAM+Dir F8=RdFiles"); break;
         }
 
@@ -545,6 +619,14 @@ int main(void)
             break;
             case CH_F7:
             {
+                if (false == g_disk_descriptor.dir_was_read)
+                {
+                    if (true == readBAMAndDirectory())
+                    { break; }
+                    if (true == readFiles())
+                    { break; }
+                }
+
                 displayDirectoryOverview();
                 clearScreen();
                 displayTrackAndSectorRulers();
