@@ -6,7 +6,7 @@ SOURCES = $(abspath src/errors.c) \
           $(abspath src/dos_io.c) \
           $(abspath src/display_aux.c) \
 		  $(abspath src/keyboard.c) \
-          $(abspath src/1541scan.c
+          $(abspath src/1541scan.c)
 
 TARGET = 1541scan
 
