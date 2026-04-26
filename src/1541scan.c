@@ -468,7 +468,7 @@ int main(void)
     clearScreen();
     displayTrackAndSectorRulers();
     displayDiskDescriptor(&g_disk_descriptor);
-    displayStatus("github.com/ankls/1541scan 2026-04-12");
+    displayStatus("github.com/ankls/1541scan 2026-04-26");
 
     while (true)
     {
