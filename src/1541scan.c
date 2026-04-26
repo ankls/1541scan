@@ -500,6 +500,8 @@ int main(void)
         {
             case CH_F1:
             {
+                clearScreen();
+                displayTrackAndSectorRulers();
                 clearDiskDescriptor(&g_disk_descriptor);
                 displayDiskDescriptor(&g_disk_descriptor);
                 if (true == readBAMAndDirectory())
@@ -512,6 +514,8 @@ int main(void)
             break;
             case CH_F2:
             {
+                clearScreen();
+                displayTrackAndSectorRulers();
                 clearDiskDescriptor(&g_disk_descriptor);
                 displayDiskDescriptor(&g_disk_descriptor);
             }
