@@ -458,6 +458,7 @@ int main(void)
 
     initChannels();
 
+    textcolor(TGI_COLOR_GRAY3);
     bgcolor(COLOR_BLACK);
     bordercolor(COLOR_GRAY1);
     clearDiskDescriptor(&g_disk_descriptor);
