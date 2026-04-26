@@ -19,6 +19,9 @@
             "name": "Debug 1541SCAN (VICE)",
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/build/1541scan.prg",
+            "pathMappings": [
+                { "remoteRoot": "/home/abuild", "localRoot": "/usr/lib64/cc65" }
+                ],
             "emulatorArgs": [
                 "-autostartprgmode",
                 "1",
