@@ -14,9 +14,9 @@ This tool is intended to help judging the health of a C64 floppy disk using a 15
 - F2: Forget everything about any previous disk.
 - F3: Read all previously read sectors again, if they had read errors. Mark them as 'weak', if the checksum is different than first time.
 - F4: Read all blocks of the disk that weren't read yet.
-- F5: Select a block and inspect its contents as hex.
+- F5: Select a block and inspect its contents.
 - F6: Read block allocation map (BAM) and directory sectors. Learn about disk name, files, etc.
-- F7: Select a block and inspect its contents as PETSCII codes.
+- F7: Display directory and health state of files. Current directory limit is 20 files.
 - F8: Read all files.
 
 On operations taking longer, the key "<-" (top left key on the keyboard) aborts the operation.
