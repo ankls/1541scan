@@ -9,15 +9,24 @@ This tool is intended to help judging the health of a C64 floppy disk using a 15
 - The tool doesn't know about copy protections. It doesn't look for sector alignment on tracks, doesn't know more than 35 tracks, can't discern an intentionally weak sector from a corruption etc. This judgement is up to you as a user.
 
 **Keys**
+Press the space bar to cycle the menu pages. The displayed menu hints match the in-program menu.
 
-- F1: The operations of F2, F6, F8, and then F4 in one sequence.
-- F2: Forget everything about any previous disk.
-- F3: Read all previously read sectors again, if they had read errors. Mark them as 'weak', if the checksum is different than first time.
-- F4: Read all blocks of the disk that weren't read yet.
+Menu page 1: F1=New  F3=Weak  F5=Block  F7=Files
+
+- F1: New — Clear current state, then run (BAM+Dir, Read files, Read disk) in sequence.
+- F3: Check for weak blocks — re-read sectors with previous read errors and mark differing checksums as weak.
 - F5: Select a block and inspect its contents.
-- F6: Read block allocation map (BAM) and directory sectors. Learn about disk name, files, etc.
-- F7: Display directory and health state of files. Current directory limit is 20 files.
+- F7: Display directory and health state of files (display limited to 20 files).
+
+Menu page 2: F2=Clear  F4=Blks  F6=BAM+Dir  F8=RdFiles
+
+- F2: Clear current disk state (forget previous disk).
+- F4: Read all blocks of the disk that weren't read yet.
+- F6: Read block allocation map (BAM) and directory sectors.
 - F8: Read all files.
+
+The menu pages are just there since the screen can't take all menu contents.
+It doesn't matter if you are on page 1 or 2, the keys all work.
 
 On operations taking longer, the key "<-" (top left key on the keyboard) aborts the operation.
 
