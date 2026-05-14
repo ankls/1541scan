@@ -497,12 +497,26 @@ void displayDirectoryOverview()
     {
         ubyte file_idx;
         ubyte file_display_offset = 0;
+        const ubyte display_lines = 20; // number of file lines we show at once (rows 1..20)
+
+        // Interaction loop: allow scrolling with cursor keys and exit with left-arrow (abort)
+        do
+        {
+            // Header
 
         gotoxy(0,0);
         //      0123456789012345678901234567890123456789
         printf("Nr Name             Tp. Sta Siz Chk");
 
-        for (file_idx = file_display_offset; (file_idx < g_disk_descriptor.num_files_found) && (file_idx < file_display_offset + 20); ++file_idx)
+            // Clear the file area first
+            {
+                ubyte r;
+                for (r = 1; r <= display_lines; ++r)
+                { clearRow(r); }
+            }
+
+            // Draw visible files
+            for (file_idx = file_display_offset; (file_idx < g_disk_descriptor.num_files_found) && (file_idx < file_display_offset + display_lines); ++file_idx)
         {
             FileEntry * fe_ptr;
 
@@ -517,10 +531,78 @@ void displayDirectoryOverview()
                    fe_ptr->file_size_in_blocks,
                    fileIndexToHealthString(file_idx));
         }
+
+            // Menu line with scrolling markers
+            {
+                char menu_buf[41];
+                int i;
+                const char * hint = "Cursor=Move <-=Exit";
+
+                for (i = 0; i < 40; ++i) menu_buf[i] = ' ';
+                menu_buf[40] = '\0';
+
+                // base hint
+                for (i = 0; (hint[i] != '\0') && (i < 40); ++i) menu_buf[i] = hint[i];
+
+                // show marker if there are files above
+                if (file_display_offset > 0)
+                { menu_buf[36] = '^'; }
+
+                // show marker if there are files below
+                if ((u16)file_display_offset + display_lines < (u16)g_disk_descriptor.num_files_found)
+                { menu_buf[39] = 'v'; }
+
+                displayMenu(menu_buf);
+            }
+
+            // status line
+            clearStatus();
+            gotoxy(0,23);
+            printf("Files %d..%d of %d", file_display_offset + 1,
+                   (file_display_offset + display_lines < g_disk_descriptor.num_files_found) ? (file_display_offset + display_lines) : g_disk_descriptor.num_files_found,
+                   g_disk_descriptor.num_files_found);
+
+            // wait for user input for navigation
+            {
+                char c;
+                keyb_clearBufferedChars();
+                c = keyb_readChar_blocking();
+
+                switch (c)
+                {
+                    case 0x91: // up arrow
+                        if (file_display_offset > 0)
+                        { --file_display_offset; }
+                        break;
+                    case 0x11: // down arrow
+                        if ((u16)file_display_offset + display_lines < (u16)g_disk_descriptor.num_files_found)
+                        { ++file_display_offset; }
+                        break;
+                    case 0x39: // left arrow / abort -> exit directory view
+                        clearMenu();
+                        clearStatus();
+                        return;
+                    case CH_F5:
+                    {
+                        // If user pressed F5 while in directory, select currently highlighted file (first visible)
+                        selectSector();
+                        clearScreen();
+                        displayTrackAndSectorRulers();
+                        displayDiskDescriptor(&g_disk_descriptor);
+                        clearMenu();
+                        return;
+                    }
+                    default:
+                        // ignore other keys and redraw
+                        clearStatus();
+                        clearRow(23);
+                        gotoxy(0,23);
+                        printf("unknown key 0x%02x", c);
+                        break;
+                }
+            }
+        } while (true);
     }
-    gotoxy(0,23);
-    printf("Display limited to 20 files.\n"); // todo implement scrolling if more files
-    pause();
 }
 
 
