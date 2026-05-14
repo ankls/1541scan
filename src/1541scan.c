@@ -283,6 +283,7 @@ bool readFiles()
         FileEntry *      fe_ptr;
         TrackNr          track_nr;
         TrackSectorIndex sector_idx;
+        u16              block_in_file;
 
         fe_ptr = &(g_disk_descriptor.files[file_idx]);
 
@@ -290,6 +291,7 @@ bool readFiles()
         track_nr = fe_ptr->file_data_start_track_nr;
         sector_idx = fe_ptr->file_data_start_sector_idx;
 
+        block_in_file = 0;
         error_abort = false;
 
         while (  (NO_MORE_FILE_TRACK != track_nr) // This is the exit condition (track 0) for a sane disk
@@ -310,10 +312,11 @@ bool readFiles()
             displaySectorDescriptor(track_nr, sector_idx, sd);
 
             sd->latest_dos_error = readSector(track_nr, sector_idx, &g_block_buffer);
+            ++block_in_file;
             if (DOS_EC_OK != sd->latest_dos_error)
             { displayStatus((char const * const) &(getLastDriveStatusString()->data[0])); }
             else
-            { displayStatus((char const * const) fe_ptr->file_name); }
+            { displayStatusAndNr((char const * const) fe_ptr->file_name, block_in_file); }
 
             // If we didn't read this sector already in another pass,
             // then mark this as read now. And, while we're at it,
@@ -503,10 +506,9 @@ void displayDirectoryOverview()
         do
         {
             // Header
-
-        gotoxy(0,0);
-        //      0123456789012345678901234567890123456789
-        printf("Nr Name             Tp. Sta Siz Chk");
+            gotoxy(0,0);
+            //      0123456789012345678901234567890123456789
+            printf("Nr Name             Tp. Sta Siz Chk");
 
             // Clear the file area first
             {
@@ -517,20 +519,20 @@ void displayDirectoryOverview()
 
             // Draw visible files
             for (file_idx = file_display_offset; (file_idx < g_disk_descriptor.num_files_found) && (file_idx < file_display_offset + display_lines); ++file_idx)
-        {
-            FileEntry * fe_ptr;
+            {
+                FileEntry * fe_ptr;
 
-            fe_ptr = &(g_disk_descriptor.files[file_idx]);
+                fe_ptr = &(g_disk_descriptor.files[file_idx]);
 
-            gotoxy(0, 1 + file_idx - file_display_offset);
-            printf("%2d %16s %3s %3s %03d %3s",
-                   file_idx + 1,
-                   fe_ptr->file_name,
-                   fileTypeToString(fe_ptr->file_type),
-                   fileFlagsToString(fe_ptr->file_type),
-                   fe_ptr->file_size_in_blocks,
-                   fileIndexToHealthString(file_idx));
-        }
+                gotoxy(0, 1 + file_idx - file_display_offset);
+                printf("%2d %16s %3s %3s %03d %3s",
+                       file_idx + 1,
+                       fe_ptr->file_name,
+                       fileTypeToString(fe_ptr->file_type),
+                       fileFlagsToString(fe_ptr->file_type),
+                       fe_ptr->file_size_in_blocks,
+                       fileIndexToHealthString(file_idx));
+            }
 
             // Menu line with scrolling markers
             {
@@ -615,7 +617,7 @@ int main(void)
     show_drive_status = false;
 
     initChannels();
-
+    
     textcolor(TGI_COLOR_GRAY3);
     bgcolor(COLOR_BLACK);
     bordercolor(COLOR_GRAY1);
@@ -624,7 +626,7 @@ int main(void)
     clearScreen();
     displayTrackAndSectorRulers();
     displayDiskDescriptor(&g_disk_descriptor);
-    displayStatus("github.com/ankls/1541scan 2026-04-26");
+    displayStatus("github.com/ankls/1541scan 2026-05-14");
 
     while (true)
     {
