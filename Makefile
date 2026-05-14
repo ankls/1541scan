@@ -29,7 +29,7 @@ format1:
 	cbmformat 8 1541SCAN,1
 
 format2:
-	cbmformat 8 1541SCAN,2
+	cbmformat 8 -cn 1541SCAN,2
 
 scratchall:
 	cbmctrl command 8 "S0:*"
