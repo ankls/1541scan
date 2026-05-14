@@ -438,7 +438,7 @@ void selectSector()
                 if (track_nr < TRACKS_PER_DISK)
                 { ++track_nr; }
                 break;
-            case 0x39: // Arrow left / ESC char, used as abort key in other places, so we use it here as well for consistency
+            case 0x5f: // Arrow left / ESC char, used as abort key in other places, so we use it here as well for consistency
                 return;
             case CH_F1: // F1 key
             case CH_F3: // F3 key
@@ -580,7 +580,7 @@ void displayDirectoryOverview()
                         if ((u16)file_display_offset + display_lines < (u16)g_disk_descriptor.num_files_found)
                         { ++file_display_offset; }
                         break;
-                    case 0x39: // left arrow / abort -> exit directory view
+                    case 0x5f: // left arrow / abort -> exit directory view
                         clearMenu();
                         clearStatus();
                         return;
