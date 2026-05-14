@@ -26,7 +26,7 @@ move:
 	mv *.asm asm
 
 format1:
-	cbmformat 8 1541SCAN,1
+	cbmformat 8 -cn 1541SCAN,1
 
 format2:
 	cbmformat 8 -cn 1541SCAN,2
