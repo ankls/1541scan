@@ -331,6 +331,13 @@ void displayStatus(const char * status)
     printf("%s", status);
 }
 
+void displayStatusAndNr(const char * status, u16 nr)
+{
+    clearRow(23);
+    gotoxy(0,23);
+    printf("%s %d", status, nr);
+}
+
 void clearStatus()
 {
     ubyte col;

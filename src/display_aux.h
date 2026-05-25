@@ -14,6 +14,7 @@ void clearRow(ubyte row);
 //////////////////////////////////////////////////////////////////////////
 // Screen layout "disk block health map" and "sector details"
 void displayStatus(const char * status);
+void displayStatusAndNr(const char * status, u16 nr);
 void displayMenu(const char * menu);
 
 void clearStatus();
