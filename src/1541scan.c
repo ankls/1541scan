@@ -362,8 +362,40 @@ bool readFiles()
     return user_abort;
 }
 
-void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescriptor const * const sd, bool show_as_hex)
+static void displaySectorMetadata(TrackNr t, TrackSectorIndex s, SectorDescriptor const * const sd_m)
 {
+    gotoxy(0,19);
+    printf("Track %d Sector %d", t, s);
+    gotoxy(0,20);
+    printf("DOS error: %s", getLastDriveStatusString()->data);
+    gotoxy(0,21);
+    printf("Flags: %s%s%s%s%s",
+           (0 != (sd_m->flags & SF_SectorRead))   ? "Read " : "",
+           (0 != (sd_m->flags & SF_WeakContents)) ? "Weak " : "",
+           (0 != (sd_m->flags & SF_Busy))         ? "Busy " : "",
+           (0 != (sd_m->flags & SF_Allocated))    ? "Alloc ": "",
+           (0 != (sd_m->flags & SF_File))         ? "File " : "",
+           (0 != (sd_m->flags & SF_BAM))          ? "BAM "  : "",
+           (0 != (sd_m->flags & SF_Directory))    ? "Dir "  : "");
+    gotoxy(0,22);
+    printf("Checksum: 0x%02x", sd_m->checksum);
+    gotoxy(0,23);
+    printf("file: %s", (sd_m->flags & SF_File) ? g_disk_descriptor.files[sd_m->file_table_idx].file_name : "n/a");
+}
+
+void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescriptor * sd, bool show_as_hex)
+{
+    bool hex;
+    const char * menu_text;
+    bool needs_redraw;
+    bool has_status_override;
+    char status_override[41];
+
+    /* Declarations done; init variables */
+    hex = show_as_hex;
+    needs_redraw = true; /* initial draw */
+    has_status_override = false;
+
     clearScreen();
     kio_openChannel(&g_channel_command);
     kio_openChannel(&g_channel_data);
@@ -371,28 +403,98 @@ void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
     kio_closeChannel(&g_channel_data);
     kio_closeChannel(&g_channel_command);
 
-    if (true == show_as_hex)
+    /* Wait for user input: F1 = re-read weak sector; F3 = toggle display; left arrow/ESC (0x5f) = exit */
+    for (;;)
+    {
+        char c;
+        /* Centralized redraw logic */
+        if (needs_redraw)
+        {
+            if (hex)
     { displayBlockDataAsHex(&g_block_buffer); }
     else
     { displayBlockDataAsPetscii(&g_block_buffer); }
-    gotoxy(0,19);
-    printf("Track %d Sector %d", track_nr, sector_idx);
-    gotoxy(0,20);
-    printf("DOS error: %s", getLastDriveStatusString()->data);
-    gotoxy(0,21);
-    printf("Flags: %s%s%s%s%s",
-           (0 != (sd->flags & SF_SectorRead))   ? "Read " : "",
-           (0 != (sd->flags & SF_WeakContents)) ? "Weak " : "",
-           (0 != (sd->flags & SF_Busy))         ? "Busy " : "",
-           (0 != (sd->flags & SF_Allocated))    ? "Alloc ": "",
-           (0 != (sd->flags & SF_File))         ? "File " : "",
-           (0 != (sd->flags & SF_BAM))          ? "BAM "  : "",
-           (0 != (sd->flags & SF_Directory))    ? "Dir "  : "");
-    gotoxy(0,22);
-    printf("Checksum: 0x%02x", sd->checksum);
-    gotoxy(0,23);
-    printf("file: %s", (sd->flags & SF_File) ? g_disk_descriptor.files[sd->file_table_idx].file_name : "n/a");
-    (void) keyb_readChar_blocking();
+
+            /* Print metadata using helper to avoid duplication */
+            displaySectorMetadata(track_nr, sector_idx, sd);
+
+            /* Menu text depends on current sector flags */
+            if (0 != (sd->flags & SF_WeakContents))
+            { menu_text = "F1=Reread F3=Hex/PETSCII <-=Exit"; }
+            else
+            { menu_text = "F3=Hex/PETSCII <-=Exit"; }
+            displayMenu(menu_text);
+
+            /* Status line: either override or drive status */
+            clearStatus();
+            if (has_status_override)
+            { displayStatus(status_override); }
+            else
+            { displayStatus((char const * const) &(getLastDriveStatusString()->data[0])); }
+
+            needs_redraw = false;
+        }
+
+        keyb_clearBufferedChars();
+        c = keyb_readChar_blocking();
+        if (c == 0x5f) /* Arrow left / ESC used as abort */
+        {
+            clearMenu();
+            clearStatus();
+            return;
+        }
+        else if (c == CH_F1)
+        {
+            /* Only perform re-read when sector marked as weak */
+            if (0 == (sd->flags & SF_WeakContents))
+            {
+                /* ignore */ ;
+            }
+            else
+            {
+                bool found = false;
+                DOS_ERROR_CODE dosec;
+
+                displaySectorDescriptor(track_nr, sector_idx, sd);
+
+                kio_openChannel(&g_channel_command);
+                kio_openChannel(&g_channel_data);
+                dosec = readSector(track_nr, sector_idx, &g_block_buffer);
+                sd->latest_dos_error = dosec;
+                kio_closeChannel(&g_channel_data);
+                kio_closeChannel(&g_channel_command);
+
+                if (DOS_EC_OK == dosec)
+                {
+                    found = true;
+                    sd->flags |= SF_SectorRead;
+                    sd->checksum = calculateBlockChecksum(&g_block_buffer);
+                    sd->flags &= ~SF_WeakContents;
+                }
+
+                displaySectorDescriptor(track_nr, sector_idx, sd);
+
+                /* Prepare status override and request redraw */
+                if (found)
+                { strcpy(status_override, "Correct reading found!"); }
+                else
+                { strcpy(status_override, "Read unsuccessful."); }
+                has_status_override = true;
+                needs_redraw = true;
+            }
+        }
+        else if (c == CH_F3)
+        {
+            /* Toggle display mode and request redraw; clear any status override */
+            hex = !hex;
+            has_status_override = false;
+            needs_redraw = true;
+        }
+        else
+        {
+            /* ignore other keys and continue to wait */
+        }
+    }
 }
 
 void selectSector()
