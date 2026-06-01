@@ -12,7 +12,9 @@
 //#define SEND_TO_DRIVE opencbmio_sendToDrive
 #define SEND_TO_DRIVE kio_sendToDrive
 //#define READ_FROM_DRIVE opencbmio_readFromDrive
-#define READ_FROM_DRIVE kio_readFromDrive
+#define READ_FROM_DRIVE kio_receiveFromDrive
+
+#define SEND_TO_DRIVE kio_sendToDrive
 
 // g_ prefix for global data
 BlockData g_block_buffer;
@@ -116,9 +118,35 @@ bool sendDirectCommandMR(u16 floppy_memory_address, u16 len)
            ? true : false;
 }
 
+bool sendDirectCommandMW(u16 floppy_memory_address, u16 len)
+{
+    u16 bytes_written;
+
+#if PRINT_FUNCTION_NAMES
+    printf(__func__ "()\n");
+#endif
+
+    g_command_buffer.data[0] = 77; // PETSCII 'm'
+    g_command_buffer.data[1] = 45; // PETSCII '-'
+    g_command_buffer.data[2] = 87; // PETSCII 'w'
+    g_command_buffer.data[3] = floppy_memory_address % 0xff; // binary, low address byte
+    g_command_buffer.data[4] = floppy_memory_address >> 8;   // binary, high address byte
+    g_command_buffer.data[5] = len;                          // binary, amount of bytes
+
+    return (SEND_TO_DRIVE(&g_channel_command, &(g_command_buffer.data[0]), 6, &bytes_written)
+           && (bytes_written == 6))
+           ? true : false;
+}
+
+
 bool readFromDrive(ubyte * const buffer_address, u16 const buffer_len, u16 * const bytes_read)
 {
     return (DOS_EC_OK == READ_FROM_DRIVE(&g_channel_data, buffer_address, buffer_len, bytes_read) ? true : false);
+}
+
+bool writeToDrive(ubyte const * const buffer_address, u16 const buffer_len, u16 * const bytes_written)
+{
+    return (DOS_EC_OK == SEND_TO_DRIVE(&g_channel_data, buffer_address, buffer_len, bytes_written) ? true : false);
 }
 
 DOS_ERROR_CODE readDriveErrorCode()

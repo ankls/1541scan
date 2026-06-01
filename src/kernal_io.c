@@ -223,7 +223,7 @@ bool kio_sendToDrive(Channel const * const channel, ubyte const * const data, co
      }
 }
 
-KERNAL_ST_SERIAL_STATUS kio_readFromDrive(Channel const * const channel, ubyte * const data, const u16 buffer_length, u16 * const bytes_read)
+KERNAL_ST_SERIAL_STATUS kio_receiveFromDrive(Channel const * const channel, ubyte * const data, const u16 buffer_length, u16 * const bytes_read)
 {
     KERNAL_ST_SERIAL_STATUS st;
     u16 idx;

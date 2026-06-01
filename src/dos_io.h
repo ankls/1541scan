@@ -18,14 +18,20 @@ extern Command   g_command_buffer;
 extern Status    g_status_buffer;
 
 
+// DOS commands
 bool sendResetDrive();
 bool sendInitializeDrive();
 bool sendDirectCommandU1(TrackNr track_nr, TrackSectorIndex sector_nr);
 bool sendDirectCommandBP(ubyte offset);
 bool sendDirectCommandMR(u16 floppy_memory_address, u16 len);
+bool sendDirectCommandMW(u16 floppy_memory_address, u16 len);
+
+// Transfer etc.
 bool readFromDrive(ubyte * const buffer_address, u16 const buffer_len, u16 * const bytes_read);
 DOS_ERROR_CODE readDriveErrorCode();
 Status const * getLastDriveStatusString();
 DOS_ERROR_CODE readSector(TrackNr track_nr, TrackSectorIndex sector_idx, BlockData * const block_data);
+bool writeToDrive(ubyte const * const buffer_address, u16 const buffer_len, u16 * const bytes_written);
+
 
 #endif // DOS_IO_H

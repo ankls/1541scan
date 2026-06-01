@@ -45,7 +45,7 @@ bool opencbmio_sendToDrive(Channel const  * const channel, ubyte const * const d
     return (length == *bytes_written) ? true : false;
 }
 
-KERNAL_ST_SERIAL_STATUS opencbmio_readFromDrive(Channel const * const channel, ubyte * const data, const u16 buffer_length, u16 * const bytes_read)
+KERNAL_ST_SERIAL_STATUS opencbmio_receiveFromDrive(Channel const * const channel, ubyte * const data, const u16 buffer_length, u16 * const bytes_read)
 {
    int rc;
 #if PRINT_FUNCTION_NAMES
