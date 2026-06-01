@@ -411,9 +411,9 @@ void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
         if (needs_redraw)
         {
             if (hex)
-    { displayBlockDataAsHex(&g_block_buffer); }
-    else
-    { displayBlockDataAsPetscii(&g_block_buffer); }
+            { displayBlockDataAsHex(&g_block_buffer); }
+            else
+            { displayBlockDataAsPetscii(&g_block_buffer); }
 
             /* Print metadata using helper to avoid duplication */
             displaySectorMetadata(track_nr, sector_idx, sd);
@@ -725,7 +725,7 @@ int main(void)
     clearScreen();
     displayTrackAndSectorRulers();
     displayDiskDescriptor(&g_disk_descriptor);
-    displayStatus("github.com/ankls/1541scan 2026-05-14");
+    displayStatus("github.com/ankls/1541scan 2026-06-01");
 
     while (true)
     {
