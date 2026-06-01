@@ -27,6 +27,7 @@ void sectorDescriptorToCharAndColor(SectorDescriptor const * const sector_descri
         {
             // Sector has different contents in each read, thus is "weak"
             *c = 'W';
+            *color = COLOR_LIGHTRED;
         }
         else
         {
