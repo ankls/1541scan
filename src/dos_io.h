@@ -32,6 +32,6 @@ DOS_ERROR_CODE readDriveErrorCode();
 Status const * getLastDriveStatusString();
 DOS_ERROR_CODE readSector(TrackNr track_nr, TrackSectorIndex sector_idx, BlockData * const block_data);
 bool writeToDrive(ubyte const * const buffer_address, u16 const buffer_len, u16 * const bytes_written);
-
+DOS_ERROR_CODE writeSector(TrackNr track_nr, TrackSectorIndex sector_idx, BlockData const * const block_data);
 
 #endif // DOS_IO_H

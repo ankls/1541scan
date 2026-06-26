@@ -77,6 +77,34 @@ bool sendDirectCommandU1(TrackNr track_nr, TrackSectorIndex sector_idx)
            ? true : false;
 }
 
+// Write a block into floppy's memory at address 0x0300 using U2 command
+bool sendDirectCommandU2(TrackNr track_nr, TrackSectorIndex sector_idx)
+{
+    u16 bytes_written;
+
+#if PRINT_FUNCTION_NAMES
+    printf(__func__ "()\n");
+#endif
+
+    g_command_buffer.data[0] =  85; // PETSCII 'u'
+    g_command_buffer.data[1] =  50; // PETSCII '2'
+    g_command_buffer.data[2] =  32; // PETSCII ' '
+    g_command_buffer.data[3] =  48 + g_channel_data.drive_channel; // PETSCII secondary channel
+    g_command_buffer.data[4] =  32; // PETSCII ' '
+    g_command_buffer.data[5] =  48; // PETSCII '0' Drive number in logical unit, starting with 0. 1541 has only one disk drive in its unit, hence always 0.
+    g_command_buffer.data[6] =  32; // PETSCII ' '
+    g_command_buffer.data[7] =  48 + (track_nr / 10); // PETSCII '0' + (track div 10)
+    g_command_buffer.data[8] =  48 + (track_nr % 10); // PETSCII '0' + (track mod 10)
+    g_command_buffer.data[9] =  32; // PETSCII ' '
+    g_command_buffer.data[10] =  48 + (sector_idx / 10); // PETSCII '0' + (sector div 10)
+    g_command_buffer.data[11] =  48 + (sector_idx % 10);// PETSCII '0' + (sector mod 10)
+
+    return (SEND_TO_DRIVE(&g_channel_command, &(g_command_buffer.data[0]), 12, &bytes_written)
+           && (bytes_written == 12))
+           ? true : false;
+}
+
+
 // Position the read-pointer in floppy's memory to a desired offset
 bool sendDirectCommandBP(ubyte offset)
 {
@@ -98,6 +126,7 @@ bool sendDirectCommandBP(ubyte offset)
            ? true : false;
 }
 
+// Read a block from floppy's memory using MR command
 bool sendDirectCommandMR(u16 floppy_memory_address, u16 len)
 {
     u16 bytes_written;
@@ -118,6 +147,7 @@ bool sendDirectCommandMR(u16 floppy_memory_address, u16 len)
            ? true : false;
 }
 
+// Write a block to floppy's memory using MW command
 bool sendDirectCommandMW(u16 floppy_memory_address, u16 len)
 {
     u16 bytes_written;
@@ -197,11 +227,49 @@ DOS_ERROR_CODE readSector(TrackNr track_nr, TrackSectorIndex sector_idx, BlockDa
 #if PRINT_IO
     printf("DOS %s\n", dosErrorString(dosec));
 #endif
-    sendDirectCommandMR(0x0300, 256); // read 256 bytes from floppy memory at 0x0300 into the block buffer
+    sendDirectCommandMR(0x0300, 256); // read 256 bytes from floppy memory at 0x0300 into the block buffer g_command_buffer
     readFromDrive(&(block_data->data[0]), sizeof(BlockData), &bytes_read);
 
     if (bytes_read != sizeof(BlockData))
     { return DOS_EC_READ_ERROR_27; } // We fake this error code
     else
     { return DOS_EC_OK; }
+}
+
+DOS_ERROR_CODE writeSector(TrackNr track_nr, TrackSectorIndex sector_idx, BlockData const * const block_data)
+{
+    bool ok;
+    DOS_ERROR_CODE dosec;
+    u16 bytes_written;
+
+    sendDirectCommandMW(0x0300, 256); // write 256 bytes from g_command_bufferto floppy memory at 0x0300 from the block buffer
+    writeToDrive(&(block_data->data[0]), sizeof(BlockData), &bytes_written);
+
+    if (bytes_written != sizeof(BlockData))
+    { return DOS_EC_WRITE_ERROR_DATA; } // We fake this error code
+    else
+    { return DOS_EC_OK; }
+
+    dosec = readDriveErrorCode();
+    if (DOS_EC_OK != dosec)
+    { return dosec; }
+
+#if PRINT_IO
+    printf("DOS %s\n", dosErrorString(dosec));
+#endif
+
+#if PRINT_IO
+    printf("trk %2d,sec %2d,", track_nr, sector_idx);
+#endif
+    ok = sendDirectCommandU2(track_nr, sector_idx);
+    if (false == ok)
+    { return DOS_EC_DRIVE_NOT_READY; } // We fake this error code
+
+#if PRINT_IO
+    printf("U2 %s,", (ok ? "OK" : "FAIL"));
+#endif
+
+    dosec = readDriveErrorCode();
+    if (DOS_EC_OK != dosec)
+    { return dosec; }
 }

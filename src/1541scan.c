@@ -409,6 +409,7 @@ void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
     bool needs_redraw;
     bool has_status_override;
     char status_override[41];
+    bool bufferContainsFixedData = false;
 
     /* Declarations done; init variables */
     hex = show_as_hex;
@@ -440,6 +441,8 @@ void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
             /* Menu text depends on current sector flags */
             if ((0 != (sd->flags & SF_WeakContents)) && (0 != (sd->flags & SF_ChecksumMismatch)))
             { menu_text = "F1=Reread F3=Hex/PETSCII <-=Exit"; }
+            else if (bufferContainsFixedData)
+            { menu_text = "F3=Hex/PETSCII F5=Write <-=Exit"; }
             else
             { menu_text = "F3=Hex/PETSCII <-=Exit"; }
             displayMenu(menu_text);
@@ -465,15 +468,16 @@ void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
         else if (c == CH_F1)
         {
             /* Only perform re-read when sector marked as weak and has wrong checksum or, if it wasn't read before */
-            if (  ((0 == (sd->flags & SF_WeakContents)) || (0 == (sd->flags & SF_ChecksumMismatch)))
-               ||  (0 != (sd->flags & SF_SectorRead)) )
+            if (  (0 == (sd->flags & SF_WeakContents))
+               || (0 == (sd->flags & SF_ChecksumMismatch))
+               || (0 != (sd->flags & SF_SectorRead)))
             {
                 /* ignore */ ;
             }
             else
             {
-                bool foundCorrectData = false;
                 DOS_ERROR_CODE dosec;
+                bufferContainsFixedData = false;
 
                 displaySectorDescriptor(track_nr, sector_idx, sd);
 
@@ -488,7 +492,7 @@ void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
 
                 if (DOS_EC_OK == dosec)
                 {
-                    foundCorrectData = true;
+                    bufferContainsFixedData = true;
                     sd->flags &= ~SF_ChecksumMismatch;
                 }
                 else
@@ -501,7 +505,7 @@ void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
                 displaySectorDescriptor(track_nr, sector_idx, sd);
 
                 /* Prepare status override and request redraw */
-                if (foundCorrectData)
+                if (bufferContainsFixedData)
                 { strcpy(status_override, "Correct reading found!"); }
                 else
                 { strcpy(status_override, "Read unsuccessful."); }
@@ -515,6 +519,44 @@ void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
             hex = !hex;
             has_status_override = false;
             needs_redraw = true;
+        }
+        else if (c == CH_F5)
+        {
+            /* Only perform write when sector marked as weak and has correct checksum */
+            if (false == bufferContainsFixedData)
+            {
+                /* ignore */ ;
+            }
+            else
+            {
+                DOS_ERROR_CODE dosec;
+
+                displaySectorDescriptor(track_nr, sector_idx, sd);
+
+                kio_openChannel(&g_channel_command);
+                kio_openChannel(&g_channel_data);
+                dosec = writeSector(track_nr, sector_idx, &g_block_buffer);
+                sd->latest_dos_error = dosec;
+                kio_closeChannel(&g_channel_data);
+                kio_closeChannel(&g_channel_command);
+
+                if (DOS_EC_OK == dosec)
+                {
+                    sd->flags &= ~SF_WeakContents;
+                    sd->flags &= ~SF_ChecksumMismatch;
+                    strcpy(status_override, "Write successful!");
+                }
+                else
+                {
+                    strcpy(status_override, "Write failed.");
+                }
+
+                displaySectorDescriptor(track_nr, sector_idx, sd);
+
+                /* Request redraw */
+                has_status_override = true;
+                needs_redraw = true;
+            }
         }
         else
         {
