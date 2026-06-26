@@ -24,13 +24,14 @@ ubyte calculateBlockChecksum(BlockData const * const block_data);
 
 /////////////////////////////////////////////////////////////////////////////////
 // Sector-related definitions
-typedef enum { SF_SectorRead     = 0x01, // Does the descriptor contain any usable info?
-               SF_WeakContents   = 0x02, // Does the block data change during reads?
-               SF_Busy           = 0x04, // Are we busy updating the descriptor's info?
-               SF_Allocated      = 0x08, // Marked as occuped in BAM
-               SF_File           = 0x10, // Occupied by a file (found by following file block chains)
-               SF_BAM            = 0x20, // Occupied by BAM (found by reading BAM)
-               SF_Directory      = 0x40, // Occupied by directory (found by reading directory)
+typedef enum { SF_SectorRead       = 0x01, // Does the descriptor contain any usable info?
+               SF_WeakContents     = 0x02, // Does the block data change during reads?
+               SF_ChecksumMismatch = 0x04, // Does the block data checksum not match the descriptor's checksum?
+               SF_Busy             = 0x08, // Are we busy updating the descriptor's info?
+               SF_Allocated        = 0x10, // Marked as occuped in BAM
+               SF_File             = 0x20, // Occupied by a file (found by following file block chains)
+               SF_BAM              = 0x40, // Occupied by BAM (found by reading BAM)
+               SF_Directory        = 0x80, // Occupied by directory (found by reading directory)
               } SectorFlags;
 
 typedef struct {

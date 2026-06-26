@@ -51,11 +51,14 @@ bool readDisk()
                 displaySectorDescriptor(track_nr, sector_idx, sd);
 
                 dosec = readSector(track_nr, sector_idx, &g_block_buffer);
+                sd->latest_dos_error = dosec;
                 displayStatus((char const * const) &(getLastDriveStatusString()->data[0]));
+
+                if (DOS_EC_OK != dosec)
+                { sd->flags |= SF_ChecksumMismatch; }
 
                 sd->flags |= SF_SectorRead;
                 sd->flags &= ~SF_Busy;
-                sd->latest_dos_error = dosec;
                 sd->checksum = calculateBlockChecksum(&g_block_buffer);
                 displaySectorDescriptor(track_nr, sector_idx, sd);
 
@@ -99,19 +102,28 @@ bool checkForWeakBlocks()
 
                 // If we did read the sector OK, then its very unlikely that the block
                 // is weak. The checksum must have matched by chance for that to be the case.
-                if (DOS_EC_OK == sd->latest_dos_error)
+                if ((SF_SectorRead == (sd->flags & SF_SectorRead)) && (SF_ChecksumMismatch != (sd->flags & SF_ChecksumMismatch)))
                 { continue; }
 
                 sd->flags |= SF_Busy;
                 displaySectorDescriptor(track_nr, sector_idx, sd);
 
                 dosec = readSector(track_nr, sector_idx, &g_block_buffer);
+                sd->latest_dos_error = dosec;
                 if (DOS_EC_OK != dosec) // We keep the status on display until next error
                 { displayStatus((char const * const) &(getLastDriveStatusString()->data[0])); }
+                else 
+                {
+                    // The checksum is now OK, thus the checksum error flag is cleared.
+                    sd->flags &= ~SF_ChecksumMismatch;
+                }
 
                 {
                     ubyte checksum;
                     checksum = calculateBlockChecksum(&g_block_buffer);
+                    // If we now computed a different checksum than the one we computed before, then the block is weak.
+                    // This flag must be set regardless if the checksum is OK now or not, since any further reading
+                    // may yield a different checksum again.
                     if (sd->checksum != checksum)
                     { sd->flags |= SF_WeakContents; }
                 }
@@ -158,15 +170,19 @@ bool readBAMAndDirectory()
         SectorDescriptor * sd;
 
         {
+            DOS_ERROR_CODE dosec;
             // 18,0 is the BAM location on the disk
             sd = &(g_disk_descriptor.descriptor[trackAndSectorToDiskSectorIndex(18, 0)]);
 
             sd->flags |= SF_Busy;
             displaySectorDescriptor(18, 0, sd);
 
-            sd->latest_dos_error = readSector(18, 0, &g_block_buffer);
+            dosec = readSector(18, 0, &g_block_buffer);
+            sd->latest_dos_error = dosec;
 
             sd->flags |= (SF_SectorRead | SF_Allocated | SF_BAM);
+            if (DOS_EC_OK != dosec)
+            { sd->flags |= SF_ChecksumMismatch; }
             sd->flags &= ~SF_Busy;
             displaySectorDescriptor(18, 0, sd);
         }
@@ -194,6 +210,7 @@ bool readBAMAndDirectory()
             bool                   end_of_dir_reached;
             DirectoryBlock const * dir_block_ptr;
             ubyte                  num_dir_sectors_read;
+            DOS_ERROR_CODE         dosec;
 
             end_of_dir_reached = false;
             dir_block_ptr = (DirectoryBlock const *) &(g_block_buffer.data[0]);
@@ -211,8 +228,9 @@ bool readBAMAndDirectory()
                 displaySectorDescriptor(track_nr, sector_idx, sd);
 
                 // This fills the buffer with new data, which we access via dir_block_ptr
-                sd->latest_dos_error = readSector(track_nr, sector_idx, &g_block_buffer);
+                dosec = readSector(track_nr, sector_idx, &g_block_buffer);
                 sd->flags |= (SF_SectorRead | SF_Allocated | SF_Directory);
+                sd->latest_dos_error = dosec;
 
                 sd->flags &= ~SF_Busy;
                 displaySectorDescriptor(track_nr, sector_idx, sd);
@@ -250,7 +268,7 @@ bool readBAMAndDirectory()
                 // protect against corrupted or protected disks and stops us from infinite reads.
                 end_of_dir_reached = (NO_MORE_DIRECTORY_TRACK == track_nr)
                                   || (MAX_DIRECTORY_SECTORS == num_dir_sectors_read)
-                                  || (DOS_EC_OK != sd->latest_dos_error)
+                                  || (DOS_EC_OK != dosec)
                                   || (true == abort_operation);
             }
 
@@ -369,14 +387,15 @@ static void displaySectorMetadata(TrackNr t, TrackSectorIndex s, SectorDescripto
     gotoxy(0,20);
     printf("DOS error: %s", getLastDriveStatusString()->data);
     gotoxy(0,21);
-    printf("Flags: %s%s%s%s%s",
-           (0 != (sd_m->flags & SF_SectorRead))   ? "Read " : "",
-           (0 != (sd_m->flags & SF_WeakContents)) ? "Weak " : "",
-           (0 != (sd_m->flags & SF_Busy))         ? "Busy " : "",
-           (0 != (sd_m->flags & SF_Allocated))    ? "Alloc ": "",
-           (0 != (sd_m->flags & SF_File))         ? "File " : "",
-           (0 != (sd_m->flags & SF_BAM))          ? "BAM "  : "",
-           (0 != (sd_m->flags & SF_Directory))    ? "Dir "  : "");
+    printf("Flags: %s%s%s%s%s%s%s%s",
+           (0 != (sd_m->flags & SF_SectorRead))       ? "Read "   : "",
+           (0 != (sd_m->flags & SF_WeakContents))     ? "Weak "   : "",
+           (0 != (sd_m->flags & SF_ChecksumMismatch)) ? "ChkErr " : "",
+           (0 != (sd_m->flags & SF_Busy))             ? "Busy "   : "",
+           (0 != (sd_m->flags & SF_Allocated))        ? "Alloc "  : "",
+           (0 != (sd_m->flags & SF_File))             ? "File "   : "",
+           (0 != (sd_m->flags & SF_BAM))              ? "BAM "    : "",
+           (0 != (sd_m->flags & SF_Directory))        ? "Dir "    : "");
     gotoxy(0,22);
     printf("Checksum: 0x%02x", sd_m->checksum);
     gotoxy(0,23);
@@ -412,14 +431,14 @@ void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
         {
             if (hex)
             { displayBlockDataAsHex(&g_block_buffer); }
-            else
+            else // PETSCII
             { displayBlockDataAsPetscii(&g_block_buffer); }
 
             /* Print metadata using helper to avoid duplication */
             displaySectorMetadata(track_nr, sector_idx, sd);
 
             /* Menu text depends on current sector flags */
-            if (0 != (sd->flags & SF_WeakContents))
+            if ((0 != (sd->flags & SF_WeakContents)) && (0 != (sd->flags & SF_ChecksumMismatch)))
             { menu_text = "F1=Reread F3=Hex/PETSCII <-=Exit"; }
             else
             { menu_text = "F3=Hex/PETSCII <-=Exit"; }
@@ -445,14 +464,15 @@ void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
         }
         else if (c == CH_F1)
         {
-            /* Only perform re-read when sector marked as weak */
-            if (0 == (sd->flags & SF_WeakContents))
+            /* Only perform re-read when sector marked as weak and has wrong checksum or, if it wasn't read before */
+            if (  ((0 == (sd->flags & SF_WeakContents)) || (0 == (sd->flags & SF_ChecksumMismatch)))
+               ||  (0 != (sd->flags & SF_SectorRead)) )
             {
                 /* ignore */ ;
             }
             else
             {
-                bool found = false;
+                bool foundCorrectData = false;
                 DOS_ERROR_CODE dosec;
 
                 displaySectorDescriptor(track_nr, sector_idx, sd);
@@ -464,18 +484,24 @@ void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
                 kio_closeChannel(&g_channel_data);
                 kio_closeChannel(&g_channel_command);
 
+                sd->flags |= SF_SectorRead;
+
                 if (DOS_EC_OK == dosec)
                 {
-                    found = true;
-                    sd->flags |= SF_SectorRead;
-                    sd->checksum = calculateBlockChecksum(&g_block_buffer);
-                    sd->flags &= ~SF_WeakContents;
+                    foundCorrectData = true;
+                    sd->flags &= ~SF_ChecksumMismatch;
                 }
+                else
+                {
+                    sd->flags |= SF_ChecksumMismatch;
+                }
+
+                sd->checksum = calculateBlockChecksum(&g_block_buffer);
 
                 displaySectorDescriptor(track_nr, sector_idx, sd);
 
                 /* Prepare status override and request redraw */
-                if (found)
+                if (foundCorrectData)
                 { strcpy(status_override, "Correct reading found!"); }
                 else
                 { strcpy(status_override, "Read unsuccessful."); }
@@ -549,8 +575,8 @@ void selectSector()
             default:
                 break;
         }
-    } while (true);
-
+    }
+    while (true);
 }
 
 const char * fileIndexToHealthString(ubyte file_index)
@@ -576,8 +602,8 @@ const char * fileIndexToHealthString(ubyte file_index)
 
         // check if this block is ok
         if (  (0 == (sd->flags & SF_SectorRead))
+           || (0 != (sd->flags & SF_ChecksumMismatch))
            || (0 != (sd->flags & SF_WeakContents))
-           || (DOS_EC_OK != sd->latest_dos_error)
            || (FILE_TYPE_DELETED == fe_ptr->file_type))
         { return "DMG"; }
 
