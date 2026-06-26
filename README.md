@@ -3,7 +3,7 @@
 This tool is intended to help judging the health of a C64 floppy disk using a 1541 floppy. The user interface is meant to be used quickly, e.g. insert a disk, press F1, let the program do its job, come back some minutes later, and decide yourself what to do.
 
 **Limits**
-- The tool does not modify the disk (e.g. to try repairing the data).
+- The tool normally does not modify the disk during scanning, but it does offer a manual sector-write option in the detailed block inspector.
 - The tool is not meant to be fast or small.
 - The tool uses the 1541 DOS commands. It does not load a program to the floppy drive. All issues that the Commodore DOS does not find stay hidden.
 - The tool doesn't know about copy protections. It doesn't look for sector alignment on tracks, doesn't know more than 35 tracks, can't discern an intentionally weak sector from a corruption etc. This judgement is up to you as a user.

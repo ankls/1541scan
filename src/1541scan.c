@@ -662,7 +662,7 @@ const char * fileIndexToHealthString(ubyte file_index)
     return "DMG";
 }
 
-void displayDirectoryOverview()
+void inspectDirectory()
 {
     clearScreen();
     // Leverage the fact that we read the directory already in the disk descriptor.
@@ -754,6 +754,7 @@ void displayDirectoryOverview()
                         clearMenu();
                         clearStatus();
                         return;
+                    /*
                     case CH_F5:
                     {
                         // If user pressed F5 while in directory, select currently highlighted file (first visible)
@@ -764,6 +765,7 @@ void displayDirectoryOverview()
                         clearMenu();
                         return;
                     }
+                    */
                     default:
                         // ignore other keys and redraw
                         clearStatus();
@@ -882,7 +884,7 @@ int main(void)
                     { break; }
                 }
 
-                displayDirectoryOverview();
+                inspectDirectory();
                 clearScreen();
                 displayTrackAndSectorRulers();
                 displayDiskDescriptor(&g_disk_descriptor);
