@@ -402,7 +402,7 @@ static void displaySectorMetadata(TrackNr t, TrackSectorIndex s, SectorDescripto
     printf("file: %s", (sd_m->flags & SF_File) ? g_disk_descriptor.files[sd_m->file_table_idx].file_name : "n/a");
 }
 
-void displaySector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescriptor * sd, bool show_as_hex)
+void inspectSector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescriptor * sd, bool show_as_hex)
 {
     bool hex;
     const char * menu_text;
@@ -612,7 +612,7 @@ void selectSector()
                 return;
             case CH_F1: // F1 key
             case CH_F3: // F3 key
-                displaySector(track_nr, sector_idx, sd, CH_F1 == c /* show_as_hex */);
+                inspectSector(track_nr, sector_idx, sd, CH_F1 == c /* show_as_hex */);
                 return;
             default:
                 break;
@@ -793,7 +793,7 @@ int main(void)
     clearScreen();
     displayTrackAndSectorRulers();
     displayDiskDescriptor(&g_disk_descriptor);
-    displayStatus("github.com/ankls/1541scan 2026-06-01");
+    displayStatus("github.com/ankls/1541scan 2026-06-28");
 
     while (true)
     {
