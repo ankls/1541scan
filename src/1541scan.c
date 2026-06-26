@@ -469,8 +469,7 @@ void inspectSector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
         {
             /* Only perform re-read when sector marked as weak and has wrong checksum or, if it wasn't read before */
             if (  (0 == (sd->flags & SF_WeakContents))
-               || (0 == (sd->flags & SF_ChecksumMismatch))
-               || (0 != (sd->flags & SF_SectorRead)))
+               || (0 == (sd->flags & SF_ChecksumMismatch)))
             {
                 /* ignore */ ;
             }
