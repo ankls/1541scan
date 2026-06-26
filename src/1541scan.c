@@ -478,8 +478,6 @@ void inspectSector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
                 DOS_ERROR_CODE dosec;
                 bufferContainsFixedData = false;
 
-                displaySectorDescriptor(track_nr, sector_idx, sd);
-
                 kio_openChannel(&g_channel_command);
                 kio_openChannel(&g_channel_data);
                 dosec = readSector(track_nr, sector_idx, &g_block_buffer);
@@ -500,8 +498,6 @@ void inspectSector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
                 }
 
                 sd->checksum = calculateBlockChecksum(&g_block_buffer);
-
-                displaySectorDescriptor(track_nr, sector_idx, sd);
 
                 /* Prepare status override and request redraw */
                 if (bufferContainsFixedData)
@@ -530,8 +526,6 @@ void inspectSector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
             {
                 DOS_ERROR_CODE dosec;
 
-                displaySectorDescriptor(track_nr, sector_idx, sd);
-
                 kio_openChannel(&g_channel_command);
                 kio_openChannel(&g_channel_data);
                 dosec = writeSector(track_nr, sector_idx, &g_block_buffer);
@@ -549,8 +543,6 @@ void inspectSector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
                 {
                     strcpy(status_override, "Write failed.");
                 }
-
-                displaySectorDescriptor(track_nr, sector_idx, sd);
 
                 /* Request redraw */
                 has_status_override = true;
