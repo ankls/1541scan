@@ -247,8 +247,6 @@ DOS_ERROR_CODE writeSector(TrackNr track_nr, TrackSectorIndex sector_idx, BlockD
 
     if (bytes_written != sizeof(BlockData))
     { return DOS_EC_WRITE_ERROR_DATA; } // We fake this error code
-    else
-    { return DOS_EC_OK; }
 
     dosec = readDriveErrorCode();
     if (DOS_EC_OK != dosec)
