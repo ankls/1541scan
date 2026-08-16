@@ -667,7 +667,8 @@ void inspectDirectory()
                 fe_ptr = &(g_disk_descriptor.files[file_idx]);
 
                 gotoxy(0, 1 + file_idx - file_display_offset);
-                printf("%2d %16s %3s %3s %03d %3s",
+                printf("%c %2d %16s %3s %3s %03d %3s",
+                       (file_idx == file_highlight_idx) ? '>' : ' ',
                        file_idx + 1,
                        fe_ptr->file_name,
                        fileTypeToString(fe_ptr->file_type),
@@ -715,14 +716,19 @@ void inspectDirectory()
                 switch (c)
                 {
                     case 0x91: // up arrow
-                        if (file_display_offset > 0)
+                        if (file_highlight_idx > 0)
+                        { --file_highlight_idx; }
+                        if (file_highlight_idx < file_display_offset)
                         { --file_display_offset; }
                         break;
                     case 0x11: // down arrow
+                        if (((u16)file_highlight_idx + 1) < (u16)g_disk_descriptor.num_files_found)
+                        { ++file_highlight_idx; }
                         if ((u16)file_display_offset + display_lines < (u16)g_disk_descriptor.num_files_found)
                         { ++file_display_offset; }
                         break;
                     case 0x5f: // left arrow / abort -> exit directory view
+                    case 0x03: // PC keyboard ESC key (0x03) -> exit directory view
                         clearMenu();
                         clearStatus();
                         return;
@@ -738,6 +744,9 @@ void inspectDirectory()
                         return;
                     }
                     */
+                    case CH_F7:
+                    {
+                    }
                     default:
                         // ignore other keys and redraw
                         clearStatus();
