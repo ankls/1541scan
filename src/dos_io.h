@@ -34,4 +34,7 @@ DOS_ERROR_CODE readSector(TrackNr track_nr, TrackSectorIndex sector_idx, BlockDa
 bool writeToDrive(ubyte const * const buffer_address, u16 const buffer_len, u16 * const bytes_written);
 DOS_ERROR_CODE writeSector(TrackNr track_nr, TrackSectorIndex sector_idx, BlockData const * const block_data);
 
+// Delete file and mark it as deleted in FileEntry
+DOS_ERROR_CODE scratchFile(FileEntry * fileEntry);
+
 #endif // DOS_IO_H

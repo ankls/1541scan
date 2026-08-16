@@ -271,3 +271,46 @@ DOS_ERROR_CODE writeSector(TrackNr track_nr, TrackSectorIndex sector_idx, BlockD
     if (DOS_EC_OK != dosec)
     { return dosec; }
 }
+
+DOS_ERROR_CODE scratchFile(FileEntry * fileEntry)
+{
+    u16 bytes_written;
+    u16 command_len;
+    ubyte name_len;
+    ubyte scratch_command[32];
+    DOS_ERROR_CODE dosec;
+
+    if ((NULL == fileEntry) || (0 == fileEntry->file_name[0]))
+    { return DOS_EC_SYNTAX_ERROR_NO_FILENAME; }
+
+    scratch_command[0] = 83; // PETSCII 's'
+    scratch_command[1] = 48; // PETSCII '0'
+    scratch_command[2] = 58; // PETSCII ':'
+
+    name_len = 0;
+    while ((name_len < sizeof(fileEntry->file_name))
+           && (0x00 != fileEntry->file_name[name_len])
+           && (0xa0 != (ubyte)fileEntry->file_name[name_len]))
+    {
+        scratch_command[3 + name_len] = (ubyte)fileEntry->file_name[name_len];
+        ++name_len;
+    }
+
+    command_len = 3 + name_len;
+
+    if (false == writeToDrive(&(scratch_command[0]), command_len, &bytes_written))
+    { return DOS_EC_DRIVE_NOT_READY; }
+
+    if (bytes_written != command_len)
+    { return DOS_EC_DRIVE_NOT_READY; }
+
+    dosec = readDriveErrorCode();
+    if ((DOS_EC_FILES_SCRATCHED == dosec) || (DOS_EC_OK == dosec))
+    {
+        fileEntry->file_type = FILE_TYPE_DELETED;
+        return DOS_EC_FILES_SCRATCHED;
+    }
+
+    return dosec;
+}
+
