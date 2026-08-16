@@ -21,27 +21,41 @@ typedef struct { ubyte data[BLOCK_SIZE]; } BlockData;
 // Computes the checksum byte of a block
 ubyte calculateBlockChecksum(BlockData const * const block_data);
 
-
 /////////////////////////////////////////////////////////////////////////////////
 // Sector-related definitions
-typedef enum { SF_SectorRead       = 0x01, // Does the descriptor contain any usable info?
-               SF_WeakContents     = 0x02, // Does the block data change during reads?
-               SF_ChecksumMismatch = 0x04, // Does the block data checksum not match the descriptor's checksum?
-               SF_Busy             = 0x08, // Are we busy updating the descriptor's info?
-               SF_Allocated        = 0x10, // Marked as occuped in BAM
-               SF_File             = 0x20, // Occupied by a file (found by following file block chains)
-               SF_BAM              = 0x40, // Occupied by BAM (found by reading BAM)
-               SF_Directory        = 0x80, // Occupied by directory (found by reading directory)
+typedef enum { // Sector quality
+               SF_SectorRead       = 0x0001, // Does the descriptor contain any usable info? That is, was the sector read at least once?
+               SF_TroubleReading   = 0x0002, // Did we have trouble reading or writing this sector?
+               SF_WeakContents     = 0x0004, // Does the block data change during reads?
+               SF_ChecksumOK       = 0x0008, // Is the 'checksum' attribute known to be OK?
+               // Sector use in disk structures (BAM, allocated, file chains)
+               SF_Allocated        = 0x0010, // Marked as occuped in BAM
+               SF_File             = 0x0020, // Occupied by a file (found by following file block chains)
+               SF_BAM              = 0x0040, // Occupied by BAM (found by reading BAM)
+               SF_Directory        = 0x0080, // Occupied by directory (found by reading directory)
+               // Operational state
+               SF_Busy             = 0x0100, // Are we busy updating the descriptor's info?
               } SectorFlags;
 
 typedef struct {
-    ubyte                   flags;
+    u16                     flags;
     DOSErrorCode            latest_dos_error;
     ubyte                   checksum;
     ubyte                   file_table_idx;
     ubyte                   file_successor_track_nr;   // Points to the next block in the file, otherwise NO_MORE_FILE_TRACK/0x00 at end of chain.
     ubyte                   file_successor_sector_idx; // Only meaningful if file_successor_track_nr is != NO_MORE_FILE_TRACK.
 } SectorDescriptor;
+
+
+////////////////
+// Sector-related functions
+
+// Updates the sector descriptor with the latest read result and block data.
+void updateSectorDescriptor(SectorDescriptor * const sd, BlockData const * const block_data, DOSErrorCode dosec);
+
+// Returns true if the sector was read and the checksum was OK now and erroneous before, else false.
+// Useful, if the caller still has the block data in memory, because it then can write a fixed sector back to disk.
+bool isSectorFixedByLatestRead(SectorDescriptor const * const sd);
 
 
 /////////////////////////////////////////////////////////////////////////////////

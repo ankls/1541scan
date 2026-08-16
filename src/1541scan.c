@@ -19,6 +19,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+// We use these two strings for OK/DMG, so we can compare
+// char* values instead of comparing string contents.
+static char const * const FILE_STATUS_OK  = "OK";
+static char const * const FILE_STATUS_DMG = "DMG";
 
 // returns false if aborted, else true
 bool readDisk()
@@ -41,25 +45,21 @@ bool readDisk()
                 DOS_ERROR_CODE dosec;
                 SectorDescriptor * sd;
 
-                sd = &(g_disk_descriptor.descriptor[trackAndSectorToDiskSectorIndex(track_nr, sector_idx)]);
+                 sd = &(g_disk_descriptor.descriptor[trackAndSectorToDiskSectorIndex(track_nr, sector_idx)]);
 
                 // We skip over sectors we already read
-                if (0 != (sd->flags & SF_SectorRead))
+                if (SF_SectorRead == (sd->flags & SF_SectorRead))
                 { continue; }
 
                 sd->flags |= SF_Busy;
                 displaySectorDescriptor(track_nr, sector_idx, sd);
 
                 dosec = readSector(track_nr, sector_idx, &g_block_buffer);
-                sd->latest_dos_error = dosec;
+                updateSectorDescriptor(sd, &g_block_buffer, dosec);
+
                 displayStatus((char const * const) &(getLastDriveStatusString()->data[0]));
 
-                if (DOS_EC_OK != dosec)
-                { sd->flags |= SF_ChecksumMismatch; }
-
-                sd->flags |= SF_SectorRead;
                 sd->flags &= ~SF_Busy;
-                sd->checksum = calculateBlockChecksum(&g_block_buffer);
                 displaySectorDescriptor(track_nr, sector_idx, sd);
 
                 if (true == keyb_userHoldsAbortKey())
@@ -102,31 +102,18 @@ bool checkForWeakBlocks()
 
                 // If we did read the sector OK, then its very unlikely that the block
                 // is weak. The checksum must have matched by chance for that to be the case.
-                if ((SF_SectorRead == (sd->flags & SF_SectorRead)) && (SF_ChecksumMismatch != (sd->flags & SF_ChecksumMismatch)))
+                if (  (SF_SectorRead       == (sd->flags & SF_SectorRead))
+                   && (SF_TroubleReading   != (sd->flags & SF_TroubleReading))
+                   && (SF_ChecksumOK       == (sd->flags & SF_ChecksumOK)))
                 { continue; }
 
                 sd->flags |= SF_Busy;
                 displaySectorDescriptor(track_nr, sector_idx, sd);
 
                 dosec = readSector(track_nr, sector_idx, &g_block_buffer);
-                sd->latest_dos_error = dosec;
-                if (DOS_EC_OK != dosec) // We keep the status on display until next error
-                { displayStatus((char const * const) &(getLastDriveStatusString()->data[0])); }
-                else 
-                {
-                    // The checksum is now OK, thus the checksum error flag is cleared.
-                    sd->flags &= ~SF_ChecksumMismatch;
-                }
+                updateSectorDescriptor(sd, &g_block_buffer, dosec);
 
-                {
-                    ubyte checksum;
-                    checksum = calculateBlockChecksum(&g_block_buffer);
-                    // If we now computed a different checksum than the one we computed before, then the block is weak.
-                    // This flag must be set regardless if the checksum is OK now or not, since any further reading
-                    // may yield a different checksum again.
-                    if (sd->checksum != checksum)
-                    { sd->flags |= SF_WeakContents; }
-                }
+                displayStatus((char const * const) &(getLastDriveStatusString()->data[0]));
 
                 sd->flags &= ~SF_Busy;
                 displaySectorDescriptor(track_nr, sector_idx, sd);
@@ -178,11 +165,10 @@ bool readBAMAndDirectory()
             displaySectorDescriptor(18, 0, sd);
 
             dosec = readSector(18, 0, &g_block_buffer);
-            sd->latest_dos_error = dosec;
+            updateSectorDescriptor(sd, &g_block_buffer, dosec);
 
-            sd->flags |= (SF_SectorRead | SF_Allocated | SF_BAM);
-            if (DOS_EC_OK != dosec)
-            { sd->flags |= SF_ChecksumMismatch; }
+            sd->flags |= (SF_Allocated | SF_BAM);
+
             sd->flags &= ~SF_Busy;
             displaySectorDescriptor(18, 0, sd);
         }
@@ -229,8 +215,8 @@ bool readBAMAndDirectory()
 
                 // This fills the buffer with new data, which we access via dir_block_ptr
                 dosec = readSector(track_nr, sector_idx, &g_block_buffer);
-                sd->flags |= (SF_SectorRead | SF_Allocated | SF_Directory);
-                sd->latest_dos_error = dosec;
+                updateSectorDescriptor(sd, &g_block_buffer, dosec);
+                sd->flags |= (SF_Allocated | SF_Directory);
 
                 sd->flags &= ~SF_Busy;
                 displaySectorDescriptor(track_nr, sector_idx, sd);
@@ -319,6 +305,7 @@ bool readFiles()
               && (false == error_abort) )
         {
             SectorDescriptor * sd;
+            DOSErrorCode dosec;
 
             if (true == keyb_userHoldsAbortKey())
             { user_abort = true; } // abort on left arrow char
@@ -329,21 +316,15 @@ bool readFiles()
             sd->flags |= SF_Busy;
             displaySectorDescriptor(track_nr, sector_idx, sd);
 
-            sd->latest_dos_error = readSector(track_nr, sector_idx, &g_block_buffer);
+            dosec = readSector(track_nr, sector_idx, &g_block_buffer);
+            updateSectorDescriptor(sd, &g_block_buffer, dosec);
+
             ++block_in_file;
+
             if (DOS_EC_OK != sd->latest_dos_error)
             { displayStatus((char const * const) &(getLastDriveStatusString()->data[0])); }
             else
             { displayStatusAndNr((char const * const) fe_ptr->file_name, block_in_file); }
-
-            // If we didn't read this sector already in another pass,
-            // then mark this as read now. And, while we're at it,
-            // compute the checksum.
-            if (0 == (sd->flags & SF_SectorRead))
-            {
-                sd->flags |= SF_SectorRead;
-                sd->checksum = calculateBlockChecksum(&g_block_buffer);
-            }
 
             if (0 == (sd->flags & SF_File))
             {
@@ -390,7 +371,8 @@ static void displaySectorMetadata(TrackNr t, TrackSectorIndex s, SectorDescripto
     printf("Flags: %s%s%s%s%s%s%s%s",
            (0 != (sd_m->flags & SF_SectorRead))       ? "Read "   : "",
            (0 != (sd_m->flags & SF_WeakContents))     ? "Weak "   : "",
-           (0 != (sd_m->flags & SF_ChecksumMismatch)) ? "ChkErr " : "",
+           (0 == (sd_m->flags & SF_ChecksumOK))       ? "ChkErr " : "",
+           (0 != (sd_m->flags & SF_TroubleReading))   ? "RdErr "  : "",
            (0 != (sd_m->flags & SF_Busy))             ? "Busy "   : "",
            (0 != (sd_m->flags & SF_Allocated))        ? "Alloc "  : "",
            (0 != (sd_m->flags & SF_File))             ? "File "   : "",
@@ -409,7 +391,9 @@ void inspectSector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
     bool needs_redraw;
     bool has_status_override;
     char status_override[41];
+    DOSErrorCode dosec;
     bool bufferContainsFixedData = false;
+    bool sectorCanBeReread       = false;
 
     /* Declarations done; init variables */
     hex = show_as_hex;
@@ -419,14 +403,19 @@ void inspectSector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
     clearScreen();
     kio_openChannel(&g_channel_command);
     kio_openChannel(&g_channel_data);
-    (void) readSector(track_nr, sector_idx, &g_block_buffer);
+    dosec = readSector(track_nr, sector_idx, &g_block_buffer);
     kio_closeChannel(&g_channel_data);
     kio_closeChannel(&g_channel_command);
+
+    updateSectorDescriptor(sd, &g_block_buffer, dosec);
 
     /* Wait for user input: F1 = re-read weak sector; F3 = toggle display; left arrow/ESC (0x5f) = exit */
     for (;;)
     {
         char c;
+        bufferContainsFixedData = isSectorFixedByLatestRead(sd);
+        sectorCanBeReread       = ((SF_TroubleReading == (sd->flags & SF_TroubleReading)) && (SF_ChecksumOK != (sd->flags & SF_ChecksumOK)));
+
         /* Centralized redraw logic */
         if (needs_redraw)
         {
@@ -435,19 +424,22 @@ void inspectSector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
             else // PETSCII
             { displayBlockDataAsPetscii(&g_block_buffer); }
 
-            /* Print metadata using helper to avoid duplication */
+            // Print metadata using helper to avoid duplication
             displaySectorMetadata(track_nr, sector_idx, sd);
 
-            /* Menu text depends on current sector flags */
-            if ((0 != (sd->flags & SF_WeakContents)) && (0 != (sd->flags & SF_ChecksumMismatch)))
-            { menu_text = "F1=Reread F3=Hex/PETSCII <-=Exit"; }
-            else if (bufferContainsFixedData)
+            // Menu text depends on current sector flags.
+            if (bufferContainsFixedData)
+            // Sector has been re-read and contains correct data, so we can offer a write option.
             { menu_text = "F3=Hex/PETSCII F5=Write <-=Exit"; }
+            else if (sectorCanBeReread)
+            // Sector has trouble reading, so we can try to re-read it. We don't know if the data is correct, so we don't offer a write option.
+            { menu_text = "F1=Reread F3=Hex/PETSCII <-=Exit"; }
             else
+            // Sector is fine, don't re-read or write, just toggle display mode or exit
             { menu_text = "F3=Hex/PETSCII <-=Exit"; }
             displayMenu(menu_text);
 
-            /* Status line: either override or drive status */
+            // Status line: either override or drive status
             clearStatus();
             if (has_status_override)
             { displayStatus(status_override); }
@@ -459,7 +451,7 @@ void inspectSector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
 
         keyb_clearBufferedChars();
         c = keyb_readChar_blocking();
-        if (c == 0x5f) /* Arrow left / ESC used as abort */
+        if ((c == 0x5f) || (c == 0x03)) /* Arrow left / ESC used as abort */
         {
             clearMenu();
             clearStatus();
@@ -468,10 +460,9 @@ void inspectSector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
         else if (c == CH_F1)
         {
             /* Only perform re-read when sector marked as weak and has wrong checksum or, if it wasn't read before */
-            if (  (0 == (sd->flags & SF_WeakContents))
-               || (0 == (sd->flags & SF_ChecksumMismatch)))
+            if (false == sectorCanBeReread)
             {
-                /* ignore */ ;
+                /* ignore keypress */ ;
             }
             else
             {
@@ -481,23 +472,12 @@ void inspectSector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
                 kio_openChannel(&g_channel_command);
                 kio_openChannel(&g_channel_data);
                 dosec = readSector(track_nr, sector_idx, &g_block_buffer);
-                sd->latest_dos_error = dosec;
                 kio_closeChannel(&g_channel_data);
                 kio_closeChannel(&g_channel_command);
 
-                sd->flags |= SF_SectorRead;
+                updateSectorDescriptor(sd, &g_block_buffer, dosec);
 
-                if (DOS_EC_OK == dosec)
-                {
-                    bufferContainsFixedData = true;
-                    sd->flags &= ~SF_ChecksumMismatch;
-                }
-                else
-                {
-                    sd->flags |= SF_ChecksumMismatch;
-                }
-
-                sd->checksum = calculateBlockChecksum(&g_block_buffer);
+                bufferContainsFixedData = isSectorFixedByLatestRead(sd);
 
                 /* Prepare status override and request redraw */
                 if (bufferContainsFixedData)
@@ -520,7 +500,7 @@ void inspectSector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
             /* Only perform write when sector marked as weak and has correct checksum */
             if (false == bufferContainsFixedData)
             {
-                /* ignore */ ;
+                /* ignore keypress */ ;
             }
             else
             {
@@ -529,15 +509,15 @@ void inspectSector(TrackNr track_nr, TrackSectorIndex sector_idx, SectorDescript
                 kio_openChannel(&g_channel_command);
                 kio_openChannel(&g_channel_data);
                 dosec = writeSector(track_nr, sector_idx, &g_block_buffer);
-                sd->latest_dos_error = dosec;
                 kio_closeChannel(&g_channel_data);
                 kio_closeChannel(&g_channel_command);
 
+                updateSectorDescriptor(sd, &g_block_buffer, dosec);
+
                 if (DOS_EC_OK == dosec)
                 {
-                    sd->flags &= ~SF_WeakContents;
-                    sd->flags &= ~SF_ChecksumMismatch;
                     strcpy(status_override, "Write successful!");
+                    sd->flags = (sd->flags & ~SF_TroubleReading & ~SF_WeakContents) | SF_ChecksumOK;
                 }
                 else
                 {
@@ -634,15 +614,15 @@ const char * fileIndexToHealthString(ubyte file_index)
         sd = &(g_disk_descriptor.descriptor[trackAndSectorToDiskSectorIndex(track_nr, sector_idx)]);
 
         // check if this block is ok
-        if (  (0 == (sd->flags & SF_SectorRead))
-           || (0 != (sd->flags & SF_ChecksumMismatch))
-           || (0 != (sd->flags & SF_WeakContents))
+        if (  (SF_SectorRead     != (sd->flags & SF_SectorRead)) // if not read
+           || (SF_ChecksumOK     != (sd->flags & SF_ChecksumOK)) // or if checksum is wrong
+           || (SF_TroubleReading == (sd->flags & SF_TroubleReading)) // or if known as troubled sector
            || (FILE_TYPE_DELETED == fe_ptr->file_type))
-        { return "DMG"; }
+        { return FILE_STATUS_DMG; }
 
         // See if there is a successor block in the file, if not, we're done and can return OK
         if (NO_MORE_FILE_TRACK == sd->file_successor_track_nr)
-        { return "OK "; }
+        { return FILE_STATUS_OK; } 
 
         track_nr = sd->file_successor_track_nr;
         sector_idx = sd->file_successor_sector_idx;
@@ -650,7 +630,7 @@ const char * fileIndexToHealthString(ubyte file_index)
         ++counter;
     }
 
-    return "DMG";
+    return FILE_STATUS_DMG;
 }
 
 void inspectDirectory()
@@ -661,6 +641,7 @@ void inspectDirectory()
     {
         ubyte file_idx;
         ubyte file_display_offset = 0;
+        ubyte file_highlight_idx = 0;
         const ubyte display_lines = 20; // number of file lines we show at once (rows 1..20)
 
         // Interaction loop: allow scrolling with cursor keys and exit with left-arrow (abort)

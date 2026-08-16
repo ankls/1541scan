@@ -99,6 +99,86 @@ ubyte calculateBlockChecksum(BlockData const * const block_data)
     return checksum;
 }
 
+void updateSectorDescriptor(SectorDescriptor * const sd, BlockData const * const block_data, DOSErrorCode dosec)
+{
+    // We just read a sector, so mark this
+    sd->flags |= SF_SectorRead;
+    // Now update the record of the latest DOS error code
+    sd->latest_dos_error = dosec;
+
+    // Now for the detailed flag computation.
+
+    if (0 == (sd->flags & SF_SectorRead))
+    {
+        // Case A: The sector was never read before.
+        if (DOS_EC_OK == dosec)
+        {
+            // Case AA: The sector was now read OK
+            sd->flags    = sd->flags | SF_ChecksumOK; // Mark the sector as read and clear the checksum mismatch flag
+            sd->checksum = calculateBlockChecksum(block_data);
+        }
+        else
+        {
+            // Case AB: The sector was now read with an error
+            sd->flags    = (sd->flags | SF_TroubleReading) & ~SF_ChecksumOK; // Mark the sector as read and set the checksum mismatch and trouble reading flags
+            // We still want to update the checksum, because we want to have a record of what the checksum was when we read the sector, even if it was read with an error.
+            // If a sector yields different checksums on different reads, then it is a weak sector and we will mark it as such.
+            sd->checksum = calculateBlockChecksum(block_data);
+        }
+    }    
+    else
+    {
+        // Case B: The sector was read before.
+        if (0 == (sd->flags & SF_TroubleReading))
+        {
+            // Case BA: The sector was OK before.
+            if (DOS_EC_OK == dosec)
+            {
+                // Case BAA: The sector was read OK again.
+                // In this case, we have no new information to update the descriptor with, so we don't change anything.
+            }
+            else
+            {
+                // Case BAB: The sector was read with an error now but was OK before.
+
+                // We're having trouble reading the secotr now and this wasn't the case before, so we mark this as weak contents now.
+                sd->flags |= (sd->flags | SF_TroubleReading | SF_WeakContents);
+                if (SF_ChecksumOK == (sd->flags & SF_ChecksumOK))
+                {
+                    // If the checksum was OK before, then we don't update it, since we learned an accepted value before.
+                    // This read was obviously worse than before.
+                }
+                else
+                {
+                    // If the checksum was not OK before, then we don't have any reliable data to compute a checksum from.
+                    // If SF_ChecksumOK was already cleared, then the checksum was already marked as not OK, so we don't need to change it.
+                    const ubyte new_checksum = calculateBlockChecksum(block_data);
+                    if (new_checksum != sd->checksum)
+                    {
+                        // The checksum is different from what we had before, so we mark this as weak contents now.
+                        sd->flags |= SF_WeakContents;
+                    }
+                }
+            }
+        }
+        else
+        {
+            // Case BAB: The sector was read before and it had an error before.
+            // In this case, there is nothing to do
+        }
+
+    }
+}
+
+bool isSectorFixedByLatestRead(SectorDescriptor const * const sd)
+{
+    return (  (SF_SectorRead     == (sd->flags & SF_SectorRead))
+           && (SF_TroubleReading == (sd->flags & SF_TroubleReading))
+           && (SF_ChecksumOK     == (sd->flags & SF_ChecksumOK)));
+}
+
+
+
 void addBAMToDescriptor(BAM const * bam, DiskDescriptor * const disk_descriptor)
 {
     TrackNr track_nr;
