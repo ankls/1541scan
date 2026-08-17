@@ -183,6 +183,21 @@ bool readBAMAndDirectory()
             // sectors.
             track_nr   = bam->directory_trackNr;
             sector_idx = bam->directory_sectorIdx;
+
+            // Validate BAM directory pointers before using them
+            // Corrupted BAM can contain invalid track/sector values
+            if (  (track_nr < 1)
+               || (track_nr > TRACKS_PER_DISK)
+               || (sector_idx >= numSectorsInTrackNr(track_nr)))
+            {
+                // Mark BAM as read but directory as invalid
+                g_disk_descriptor.bam_was_read = true;
+                g_disk_descriptor.dir_was_read = false;
+                g_disk_descriptor.num_files_found = 0;
+                kio_closeChannel(&g_channel_data);
+                kio_closeChannel(&g_channel_command);
+                return false; // Corrupted BAM directory pointer
+            }
         }
 
         // Display BAM markers as an intermediate step.
@@ -207,6 +222,18 @@ bool readBAMAndDirectory()
                 ubyte file_in_sector_idx;
                 FileEntry * fe_ptr;
 
+                // Validate track and sector indices before accessing descriptor array
+                // This prevents out-of-bounds access from corrupted directory chains
+                if (  (track_nr < 1)
+                   || (track_nr > TRACKS_PER_DISK)
+                   || (sector_idx >= numSectorsInTrackNr(track_nr)))
+                {
+                    // Corrupted directory chain: invalid track/sector pointer
+                    end_of_dir_reached = true;
+                    dosec = DOS_EC_DIR_ERROR; // Mark as error
+                    break;
+                }
+
                 // Read directory sector
                 sd = &(g_disk_descriptor.descriptor[trackAndSectorToDiskSectorIndex(track_nr, sector_idx)]);
 
@@ -230,11 +257,16 @@ bool readBAMAndDirectory()
                     // Check, if the entry is empty
                     if (FILE_TYPE_DELETED != fe_ptr->file_type)
                     {
-                        // This entry contains useful data
-                        memcpy(&(g_disk_descriptor.files[g_disk_descriptor.num_files_found]),
-                               fe_ptr,
-                               sizeof(FileEntry)); 
-                        ++(g_disk_descriptor.num_files_found);
+                        // This entry contains useful data. Check if we still have space.
+                        if (g_disk_descriptor.num_files_found < MAX_FILES_PER_DISK)
+                        {
+                            memcpy(&(g_disk_descriptor.files[g_disk_descriptor.num_files_found]),
+                                   fe_ptr,
+                                   sizeof(FileEntry));
+                            ++(g_disk_descriptor.num_files_found);
+                        }
+                        // If we have reached MAX_FILES_PER_DISK, subsequent files are silently skipped.
+                        // This prevents buffer overflow while still allowing the directory read to complete.                        
                     }
                     // Note: We skip over empty directories and do not enter
                     // these in the disk descriptor. So the indices in the descriptor
@@ -611,6 +643,15 @@ const char * fileIndexToHealthString(ubyte file_index)
 
     while (counter < SECTORS_PER_DISK)
     {
+        // Validate track and sector indices before accessing descriptor array
+        // This prevents out-of-bounds access from corrupted file chains
+        if (  (track_nr < 1)
+           || (track_nr > TRACKS_PER_DISK)
+           || (sector_idx >= numSectorsInTrackNr(track_nr)))
+        {
+            return FILE_STATUS_DMG; // Corrupted chain pointer
+        }
+
         sd = &(g_disk_descriptor.descriptor[trackAndSectorToDiskSectorIndex(track_nr, sector_idx)]);
 
         // check if this block is ok
