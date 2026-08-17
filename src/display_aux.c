@@ -117,7 +117,7 @@ void clearRow(ubyte row)
     for (i = 40*row; i < (40*row+40); ++i)
     {
         POKE(0x400 + i, ' '); // Print a space at each position on the screen using direct memory access
-        POKE(COLOR_RAM + i, COLOR_LIGHTBLUE);
+        POKE(COLOR_RAM + i, (COLOR_LIGHTBLUE & 0x0f));
     }
 }
 
@@ -128,7 +128,7 @@ void clearScreen()
     for (i = 0; i < (40*25); ++i)
     {
         POKE(0x400 + i, ' '); // Print a space at each position on the screen using direct memory access
-        POKE(COLOR_RAM + i, COLOR_LIGHTBLUE);
+        POKE(COLOR_RAM + i, (COLOR_LIGHTBLUE & 0x0f));
     }
 }
 
@@ -270,7 +270,9 @@ void displaySectorDescriptor(TrackNr const track_nr, TrackSectorIndex const sect
 
     // Print the character at the correct position on the screen using direct memory access
     POKE(0x400 + offset, c);
-    POKE(0xD800 + offset, color);
+    // Ensure we write to the defined COLOR_RAM base and mask to 4 bits
+    POKE(COLOR_RAM + offset, (color & 0x0f));
+
 }
 
 void displayTrackAndSectorRulers()
@@ -357,7 +359,7 @@ void displayMenu(const char * menu)
         else
         { ++menu; } // make it inverse
         POKE(0x400 + i, c | 0x80); // Print a space at each position on the screen using direct memory access
-        POKE(COLOR_RAM + i, COLOR_LIGHTBLUE);
+        POKE(COLOR_RAM + i, (COLOR_LIGHTBLUE & 0x0f));
     }
 }
 
