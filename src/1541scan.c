@@ -164,6 +164,10 @@ bool readBAMAndDirectory()
             sd->flags |= SF_Busy;
             displaySectorDescriptor(18, 0, sd);
 
+#if ENABLE_COLOR_DEBUG
+            takeColorSnapshot();
+#endif
+
             dosec = readSector(18, 0, &g_block_buffer);
             updateSectorDescriptor(sd, &g_block_buffer, dosec);
 
@@ -171,12 +175,22 @@ bool readBAMAndDirectory()
 
             sd->flags &= ~SF_Busy;
             displaySectorDescriptor(18, 0, sd);
+
+#if ENABLE_COLOR_DEBUG
+            reportColorSnapshotDiff("after BAM read:");
+#endif
         }
 
         {
             BAM const * bam;
             bam = (BAM const *) &(g_block_buffer.data[0]);
+#if ENABLE_COLOR_DEBUG
+            takeColorSnapshot();
+#endif
             addBAMToDescriptor(bam, &g_disk_descriptor);
+#if ENABLE_COLOR_DEBUG
+            reportColorSnapshotDiff("after addBAMToDescriptor:");
+#endif
 
             // Initialize these vars with the
             // beginning of the chained list of directory
@@ -201,7 +215,13 @@ bool readBAMAndDirectory()
         }
 
         // Display BAM markers as an intermediate step.
+    #if ENABLE_COLOR_DEBUG
+        takeColorSnapshot();
+    #endif
         displayDiskDescriptor(&g_disk_descriptor);
+    #if ENABLE_COLOR_DEBUG
+        reportColorSnapshotDiff("after displayDiskDescriptor:");
+    #endif
 
         displayMenu("<- Abort. Reading directory.");
 
@@ -612,6 +632,7 @@ void selectSector()
                 { ++track_nr; }
                 break;
             case 0x5f: // Arrow left / ESC char, used as abort key in other places, so we use it here as well for consistency
+            case 0x03: // PC keyboard ESC key
                 return;
             case CH_F1: // F1 key
             case CH_F3: // F3 key
@@ -817,7 +838,7 @@ int main(void)
     clearScreen();
     displayTrackAndSectorRulers();
     displayDiskDescriptor(&g_disk_descriptor);
-    displayStatus("github.com/ankls/1541scan 2026-08-17");
+    displayStatus("github.com/ankls/1541scan 2026-08-18");
 
     while (true)
     {
